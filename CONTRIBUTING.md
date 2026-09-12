@@ -78,6 +78,8 @@ O módulo `modules/ai-providers` serializa explicitamente os campos públicos e 
 
 O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md); o roadmap do backend em [`docs/tasks/backend.md`](docs/tasks/backend.md).
 
+`modules/search` implementa busca textual no Elasticsearch, vetorial no Postgres e fusão RRF (`search/rrf.ts`, `k=60`). Os dois mecanismos usam filtros por usuário, `remindAt`, status e todas as tags. Consultas vetoriais usam os índices por dimensão com `hnsw.iterative_scan = strict_order`; outras dimensões fazem busca exata. O cache guarda candidatos por 60s; hidratação pelo Postgres revalida os filtros mesmo em hits. O indexador aguarda visibilidade no Elasticsearch antes de invalidar o cache. Após atualizar um índice antigo que usava `nextFireAt` como data, rode `pnpm --filter @findremind/api reindex` para alinhar os filtros ao campo `remindAt` do contrato.
+
 ## Estrutura do frontend
 
 ```

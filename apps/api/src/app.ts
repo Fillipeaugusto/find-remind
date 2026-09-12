@@ -17,6 +17,7 @@ import { aiProvidersRoutes } from "./modules/ai-providers/ai-providers.routes.js
 import { healthRoutes } from "./modules/health/health.routes.js";
 import { meRoutes } from "./modules/me/me.routes.js";
 import { remindersRoutes } from "./modules/reminders/reminders.routes.js";
+import { searchRoutes } from "./modules/search/search.routes.js";
 import alertBusPlugin from "./plugins/alert-bus.js";
 import authPlugin from "./plugins/auth.js";
 import dbPlugin from "./plugins/db.js";
@@ -66,6 +67,7 @@ export async function buildApp({ env, logger = true }: BuildAppOptions): Promise
     await app.register(remindersRoutes);
     await app.register(alertsRoutes);
     await app.register(aiProvidersRoutes);
+    await app.register(searchRoutes);
 
     return app;
   } catch (error) {

@@ -2,6 +2,7 @@ import type { estypes } from "@elastic/elasticsearch";
 import type { App } from "../app.js";
 import { createRemindersRepository, type ReminderWithTags } from "../modules/reminders/reminders.repository.js";
 import { remindersIndexName } from "./index.js";
+import { searchCacheKey } from "./sync.js";
 
 export interface ReminderDocument {
   userId: string;
@@ -20,8 +21,7 @@ export interface ReindexResult {
 
 const REINDEX_BATCH = 500;
 
-// `remindAt` in the index is the date the reminder is relevant for: the next
-// occurrence (or snooze) while it is pending, the anchor date otherwise.
+// Date filters match the API's remindAt field, including recurring reminders.
 export function toDocument(row: ReminderWithTags): ReminderDocument {
   return {
     userId: row.userId,
@@ -29,7 +29,7 @@ export function toDocument(row: ReminderWithTags): ReminderDocument {
     content: row.content,
     tags: row.tags,
     status: row.status,
-    remindAt: (row.nextFireAt ?? row.remindAt)?.toISOString() ?? null,
+    remindAt: row.remindAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -41,10 +41,12 @@ export async function indexReminder(app: App, reminderId: string): Promise<{ act
   const row = await createRemindersRepository(app.db).findForIndexing(reminderId);
 
   if (!row || row.deletedAt) {
-    await app.es.delete({ index, id: reminderId }, { ignore: [404] });
+    await app.es.delete({ index, id: reminderId, refresh: "wait_for" }, { ignore: [404] });
+    if (row) await app.cache.invalidate(searchCacheKey(row.userId, "*"));
     return { action: "deleted" };
   }
-  await app.es.index({ index, id: row.id, document: toDocument(row) });
+  await app.es.index({ index, id: row.id, document: toDocument(row), refresh: "wait_for" });
+  await app.cache.invalidate(searchCacheKey(row.userId, "*"));
   return { action: "indexed" };
 }
 
@@ -77,5 +79,6 @@ export async function reindexAll(app: App): Promise<ReindexResult> {
   }
 
   await app.es.indices.refresh({ index });
+  await app.cache.invalidate("search:*");
   return result;
 }

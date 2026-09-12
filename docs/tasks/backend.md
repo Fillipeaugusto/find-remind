@@ -131,11 +131,11 @@ Regras de execução:
 - Aceite: teste com embedding model mockado retornando vetor fixo; vetor persistido; sem provider → skip.
 
 ### 5.2 Busca híbrida — `feat(search): add keyword, semantic and hybrid search`
-- [ ] `modules/search`: `GET /search`.
+- [x] `modules/search`: `GET /search`.
   - `keyword`: ES `multi_match` (title^3, content, tags) + filtros (userId, from/to em `remindAt`, tags, status) + highlight.
   - `semantic`: embedding da query → pgvector `<=>` (cosine) top-K por usuário e filtros.
   - `hybrid`: roda os dois e funde com **Reciprocal Rank Fusion** (`k=60`).
-- [ ] Cache Redis `search:{userId}:{hash(params)}` TTL 60s; `cached: true` na resposta.
+- [x] Cache Redis `search:{userId}:{hash(params)}` TTL 60s; `cached: true` na resposta.
 - Aceite: testes de integração para cada modo; RRF testado unitariamente; cache hit testado.
 
 ### 5.3 Pergunta em linguagem natural — `feat(search): add /search/ask with llm filter extraction`

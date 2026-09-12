@@ -56,11 +56,17 @@ type Reminder = {
 
 ## Busca — `/search`
 
-- `GET /search?q=&mode=keyword|semantic|hybrid&from=&to=&tags=&limit=` →
+- `GET /search?q=&mode=keyword|semantic|hybrid&from=&to=&tags=&status=&limit=` →
   ```ts
   { items: { reminder: Reminder, score: number, highlights?: string[] }[], mode, tookMs, cached: boolean }
   ```
   `mode` padrão: `hybrid`. `semantic`/`hybrid` exigem um provider de IA configurado com modelo de embeddings; caso contrário `409 { code: "NO_EMBEDDING_PROVIDER" }`.
+
+  `q` é obrigatório (1–1000 caracteres após trim); `limit` começa em 20 e aceita 1–100. Datas ISO são inclusivas e filtram o campo `remindAt`, não `nextFireAt` ou o horário de adiamento. `from > to` → `400`. Tags aceitam parâmetros repetidos ou separados por vírgula; são normalizadas e todas devem corresponder. `status` usa os mesmos valores dos lembretes.
+
+  `keyword` usa relevância textual com peso 3 no título e trechos destacados com `<em>` (texto escapado para HTML). `semantic` usa similaridade de cosseno entre vetores da mesma referência de modelo e dimensão. `hybrid` combina até 500 candidatos de cada busca por Reciprocal Rank Fusion (`k = 60`). Os scores pertencem ao modo escolhido e não são comparáveis entre modos.
+
+  Resultados ficam em cache por usuário, filtros e modelo durante 60s (`cached: true` em hit). Gravações e conclusão da indexação invalidam o cache; indexação e geração de embeddings são assíncronas. A resposta sempre relê os lembretes do Postgres, verificando usuário, exclusão e filtros. Falha no provedor de embeddings ou no Elasticsearch → `502` com mensagem sanitizada.
 - `POST /search/ask` `{ question }` → busca em linguagem natural. O backend extrai filtros (intervalo de datas no fuso do usuário, tags, status) com o LLM, roda a busca híbrida e devolve:
   ```ts
   { answer: string, filters: { from?, to?, tags?, status? }, items: SearchItem[] }

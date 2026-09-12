@@ -117,7 +117,7 @@ describe("reminder search indexing", () => {
     const until = new Date(Date.now() + 3_600_000).toISOString();
     await app.inject({ method: "POST", url: `/reminders/${created.id}/snooze`, headers: { cookie: session.cookie }, payload: { until } });
     await waitForQueue();
-    expect(await getDocument(created.id)).toMatchObject({ status: "snoozed", remindAt: until });
+    expect(await getDocument(created.id)).toMatchObject({ status: "snoozed", remindAt: REMIND_AT });
   });
 
   it("removes the document when the reminder is deleted", async () => {
