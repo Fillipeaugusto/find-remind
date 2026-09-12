@@ -139,8 +139,8 @@ Regras de execução:
 - Aceite: testes de integração para cada modo; RRF testado unitariamente; cache hit testado.
 
 ### 5.3 Pergunta em linguagem natural — `feat(search): add /search/ask with llm filter extraction`
-- [ ] `ai/date-range.ts`: `resolveDateRange(expression, now, tz)` para expressões comuns (hoje, ontem, semana passada, segunda passada, mês que vem, "dia 15") — determinístico, testado.
-- [ ] `POST /search/ask`: `generateObject` (schema Zod `{ query, from?, to?, tags?, status?, dateExpression? }`) com o chat model default; se vier `dateExpression`, resolver com `resolveDateRange` no fuso do usuário; roda `hybrid`; gera `answer` curta com `generateText` citando os itens.
+- [x] `ai/date-range.ts`: `resolveDateRange(expression, now, tz)` para expressões comuns (hoje, ontem, semana passada, segunda passada, mês que vem, "dia 15") — determinístico, testado.
+- [x] `POST /search/ask`: `generateObject` (schema Zod `{ query, from?, to?, tags?, status?, dateExpression? }`) com o chat model default; se vier `dateExpression`, resolver com `resolveDateRange` no fuso do usuário; roda `hybrid`; gera `answer` curta com `generateText` citando os itens.
 - Aceite: teste unitário de `resolveDateRange` (≥ 12 casos); rota testada com LLM mockado.
 
 ---

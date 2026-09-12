@@ -72,6 +72,10 @@ type Reminder = {
   { answer: string, filters: { from?, to?, tags?, status? }, items: SearchItem[] }
   ```
 
+  `question` aceita 1–2000 caracteres após trim. Exige modelos padrão de chat e embedding (`409` com `NO_CHAT_PROVIDER` ou `NO_EMBEDDING_PROVIDER`). A busca usa até 20 resultados e a resposta em Markdown cita lembretes por links `/reminders/:id`. Sem resultados, retorna `items: []` e uma mensagem explícita, sem chamar o modelo de resumo. Falha na extração, filtros inválidos produzidos pelo modelo ou falha no resumo → `502`, sem detalhes sensíveis.
+
+  Expressões relativas são resolvidas pelo backend no fuso cadastrado, com início/fim inclusivos em UTC: hoje, ontem, anteontem, amanhã, depois de amanhã; semana atual/passada/próxima; mês atual/passado/próximo; ano atual/passado/próximo; dias da semana passados/próximos; `dia N`. Semanas vão de segunda a domingo. Dias da semana passados/próximos nunca significam hoje. `dia N` usa o mês atual, mesmo se o dia já passou; dia inexistente ou expressão não reconhecida → `400`. Limites respeitam horário de verão. Quando houver `dateExpression`, seus limites substituem `from`/`to` sugeridos pelo modelo; sem expressão relativa, datas explícitas são validadas e usadas diretamente.
+
 ## Alertas — `/alerts`
 
 ```ts

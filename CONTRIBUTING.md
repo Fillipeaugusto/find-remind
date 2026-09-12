@@ -80,6 +80,8 @@ O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md)
 
 `modules/search` implementa busca textual no Elasticsearch, vetorial no Postgres e fusão RRF (`search/rrf.ts`, `k=60`). Os dois mecanismos usam filtros por usuário, `remindAt`, status e todas as tags. Consultas vetoriais usam os índices por dimensão com `hnsw.iterative_scan = strict_order`; outras dimensões fazem busca exata. O cache guarda candidatos por 60s; hidratação pelo Postgres revalida os filtros mesmo em hits. O indexador aguarda visibilidade no Elasticsearch antes de invalidar o cache. Após atualizar um índice antigo que usava `nextFireAt` como data, rode `pnpm --filter @findremind/api reindex` para alinhar os filtros ao campo `remindAt` do contrato.
 
+`search-ask.service.ts` usa `generateObject` com Zod para extrair filtros, resolve `dateExpression` por `ai/date-range.ts`, chama o mesmo service de busca híbrida e resume os resultados com `generateText`. O resolver de datas é puro (`expression`, `now`, `tz`), usa períodos locais completos e devolve limites ISO UTC inclusivos; semanas começam na segunda e `dia N` pertence ao mês atual. Ambos os modelos usam os padrões do usuário. A resposta do resumo recebe apenas resultados autorizados e trechos limitados do conteúdo; erros remotos são sanitizados. Testes usam modelos de `ai/test`, índice Elasticsearch exclusivo e relógio falso apenas para `Date`.
+
 ## Estrutura do frontend
 
 ```
