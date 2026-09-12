@@ -20,7 +20,7 @@ pnpm --filter @findremind/api test               # só a api
 pnpm --filter @findremind/api test -- health     # um arquivo/filtro
 pnpm --filter @findremind/api test:watch
 pnpm lint && pnpm typecheck                      # o CI roda isso
-pnpm db:generate --name <nome>                # gera migration a partir do schema
+pnpm db:generate --name <nome>                   # gera migration a partir do schema
 docker compose --profile ollama up -d            # LLM local opcional
 docker compose --profile app up --build          # api + web em containers
 ```
