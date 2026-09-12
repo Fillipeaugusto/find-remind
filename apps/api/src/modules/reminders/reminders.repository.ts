@@ -158,6 +158,22 @@ export function createRemindersRepository(db: Database) {
       return deleted.length > 0;
     },
 
+    // Index maintenance reads across users and includes soft-deleted rows so
+    // their documents can be removed.
+    async findForIndexing(id: string): Promise<ReminderWithTags | undefined> {
+      const [row] = await db.select(selection).from(reminder).where(eq(reminder.id, id)).limit(1);
+      return row;
+    },
+
+    async scanForIndexing(afterId: string | undefined, limit: number): Promise<ReminderWithTags[]> {
+      return db
+        .select(selection)
+        .from(reminder)
+        .where(afterId === undefined ? undefined : gt(reminder.id, afterId))
+        .orderBy(asc(reminder.id))
+        .limit(limit);
+    },
+
     async countTags(userId: string): Promise<TagCount[]> {
       return db
         .select({ name: reminderTag.tag, count: count() })

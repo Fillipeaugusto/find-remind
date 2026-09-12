@@ -4,6 +4,7 @@ import type { App } from "../src/app.js";
 import { signUpAndLogin, type TestSession } from "./auth.js";
 import { truncateAll } from "./db.js";
 import { createTestApp } from "./helpers.js";
+import { clearQueues } from "./queues.js";
 
 const REMIND_AT = "2030-01-15T12:00:00.000Z";
 
@@ -22,6 +23,7 @@ describe("reminders routes", () => {
 
   afterAll(async () => {
     if (app) {
+      await clearQueues(app);
       await truncateAll(app.db);
       await app.close();
     }

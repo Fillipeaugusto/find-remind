@@ -1,5 +1,6 @@
 import type { App } from "../../app.js";
 import type { SessionUser } from "../../plugins/auth.js";
+import { createSearchSync } from "../../search/sync.js";
 import { decodeCursor, encodeCursor } from "./cursor.js";
 import { nextOccurrence } from "./recurrence.js";
 import {
@@ -57,6 +58,7 @@ export function toReminder(row: ReminderWithTags): Reminder {
 
 export function createRemindersService(app: App) {
   const repository = createRemindersRepository(app.db);
+  const search = createSearchSync(app);
 
   // Notes never fire. A reminder first fires at `remindAt` (or on the first
   // listed weekday from there), even when it is already in the past: the
@@ -93,6 +95,7 @@ export function createRemindersService(app: App) {
   ): Promise<Reminder> {
     const row = await repository.update(user.id, id, { ...state, updatedAt: new Date() });
     if (!row) throw app.httpErrors.notFound("Reminder not found");
+    await search.reminderChanged(row.id, user.id);
     return toReminder(row);
   }
 
@@ -140,6 +143,7 @@ export function createRemindersService(app: App) {
         },
         normalizeTags(input.tags),
       );
+      await search.reminderChanged(row.id, user.id);
       return toReminder(row);
     },
 
@@ -171,12 +175,14 @@ export function createRemindersService(app: App) {
 
       const row = await repository.update(user.id, id, { ...patch, updatedAt: new Date() }, tags);
       if (!row) throw app.httpErrors.notFound("Reminder not found");
+      await search.reminderChanged(row.id, user.id);
       return toReminder(row);
     },
 
     async remove(user: Actor, id: string): Promise<void> {
       const deleted = UUID_PATTERN.test(id) && (await repository.softDelete(user.id, id));
       if (!deleted) throw app.httpErrors.notFound("Reminder not found");
+      await search.reminderChanged(id, user.id);
     },
 
     // Completing a recurring reminder moves it to the next occurrence after

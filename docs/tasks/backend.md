@@ -80,9 +80,9 @@ Regras de execução:
 - Aceite: testes unitários de `nextOccurrence` (DST, fim de mês, `until`); testes das rotas.
 
 ### 2.4 Indexação no ES — `feat(search): index reminders on write`
-- [ ] Após create/update/delete/status: enfileira job `index-reminder` (`{ reminderId }`); worker lê do Postgres e faz `index`/`delete` no ES. Postgres é a fonte da verdade; ES é derivado.
-- [ ] Job `reindex-all` (usado por script `pnpm --filter @findremind/api reindex`).
-- [ ] Invalidar cache `search:{userId}:*` no mesmo ponto.
+- [x] Após create/update/delete/status: enfileira job `index-reminder` (`{ reminderId }`); worker lê do Postgres e faz `index`/`delete` no ES. Postgres é a fonte da verdade; ES é derivado.
+- [x] Job `reindex-all` (usado por script `pnpm --filter @findremind/api reindex`).
+- [x] Invalidar cache `search:{userId}:*` no mesmo ponto.
 - Aceite: teste de integração: cria lembrete → processa fila inline → documento existe no ES; deleta → some.
 
 ---
