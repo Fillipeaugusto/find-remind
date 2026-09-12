@@ -13,6 +13,7 @@ import {
 } from "fastify-type-provider-zod";
 import type { Env } from "./config/env.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
+import dbPlugin from "./plugins/db.js";
 
 export type App = FastifyInstance;
 
@@ -35,6 +36,7 @@ export async function buildApp({ env, logger = true }: BuildAppOptions): Promise
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: [env.WEB_URL], credentials: true });
   await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
+  await app.register(dbPlugin);
 
   await app.register(swagger, {
     openapi: {

@@ -57,6 +57,14 @@ O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md)
 - Providers de IA nos testes: sempre mockados (`ai/test`). Nunca chame API externa em teste.
 - Todo PR precisa manter `pnpm test`, `pnpm lint` e `pnpm typecheck` verdes.
 
+Antes da primeira execução local, crie o banco de teste com o Postgres do compose ativo:
+
+```bash
+docker compose exec -T postgres createdb -U findremind findremind_test
+```
+
+`createTestApp()` aplica as migrations antes de disponibilizar o app. Os helpers de banco exigem `NODE_ENV=test` e o banco `findremind_test`. Use `truncateAll(app.db)` de `apps/api/test/db.ts` entre testes; ele preserva o histórico de migrations. Os arquivos de teste executam em sequência para evitar disputas por esse banco compartilhado.
+
 ## Commits
 
 [Conventional Commits](https://www.conventionalcommits.org/), em inglês, validados pelo commitlint no CI:

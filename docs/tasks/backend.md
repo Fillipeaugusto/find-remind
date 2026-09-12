@@ -13,9 +13,9 @@ Regras de execução:
 ## Fase 0 — Infra
 
 ### 0.1 Plugin de banco (Drizzle) — `feat(api): add drizzle database plugin`
-- [ ] `plugins/db.ts` com `fastify-plugin`: cria `createDb(env.DATABASE_URL)` de `@findremind/db`, decora `app.db`, fecha em `onClose`.
-- [ ] Rodar migrations no boot **apenas** em `NODE_ENV=test` (helper `migrateTestDb()` em `test/db.ts`) — em dev/prod migrations são manuais (`pnpm db:migrate`).
-- [ ] `test/db.ts`: `truncateAll(db)` para limpar tabelas entre testes.
+- [x] `plugins/db.ts` com `fastify-plugin`: cria `createDb(env.DATABASE_URL)` de `@findremind/db`, decora `app.db`, fecha em `onClose`.
+- [x] Rodar migrations no boot **apenas** em `NODE_ENV=test` (helper `migrateTestDb()` em `test/db.ts`) — em dev/prod migrations são manuais (`pnpm db:migrate`).
+- [x] `test/db.ts`: `truncateAll(db)` para limpar tabelas entre testes.
 - Aceite: `createTestApp()` sobe com Postgres real; teste que faz `SELECT 1` via `app.db`.
 
 ### 0.2 Plugin Redis — `feat(api): add redis plugin`
