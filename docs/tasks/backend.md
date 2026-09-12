@@ -62,8 +62,8 @@ Regras de execução:
 ## Fase 2 — Lembretes
 
 ### 2.1 Schema — `feat(db): add reminders, tags and alerts tables`
-- [ ] `schema/reminders.ts`: `reminder` (id, userId, title, content, kind, remindAt, recurrence jsonb, status, snoozedUntil, nextFireAt, createdAt, updatedAt, deletedAt), `reminder_tag` (reminderId, tag) e `alert` (id, reminderId, userId, firedAt, readAt). Índices em `(userId, status)`, `(userId, nextFireAt)`, `(reminderId, tag)`.
-- [ ] Migration gerada e commitada.
+- [x] `schema/reminders.ts`: `reminder` (id, userId, title, content, kind, remindAt, recurrence jsonb, status, snoozedUntil, nextFireAt, createdAt, updatedAt, deletedAt), `reminder_tag` (reminderId, tag) e `alert` (id, reminderId, userId, firedAt, readAt). Índices em `(userId, status)`, `(userId, nextFireAt)`, `(reminderId, tag)`.
+- [x] Migration gerada e commitada.
 - Aceite: `pnpm db:migrate` aplica limpo; typecheck ok.
 
 ### 2.2 CRUD — `feat(reminders): add reminders crud`
