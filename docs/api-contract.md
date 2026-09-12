@@ -49,9 +49,9 @@ type Reminder = {
 - `GET /reminders/:id` → `Reminder` (`404` para id inexistente ou de outro usuário)
 - `PATCH /reminders/:id` (parcial) → `Reminder`. Mudar `kind`, `remindAt` ou `recurrence` reagenda o lembrete (`status = scheduled`, `snoozedUntil = null`). `tags` substitui a lista inteira.
 - `DELETE /reminders/:id` → `204` (soft delete)
-- `POST /reminders/:id/done` → `Reminder`
-- `POST /reminders/:id/snooze` `{ until }` → `Reminder`
-- `POST /reminders/:id/dismiss` → `Reminder`
+- `POST /reminders/:id/done` → `Reminder`. Lembrete recorrente: mantém `status = scheduled` e avança `nextFireAt` para a próxima ocorrência após agora (no fuso do usuário); sem próxima ocorrência (`until`) vira `done`.
+- `POST /reminders/:id/snooze` `{ until }` → `Reminder` (`status = snoozed`, `nextFireAt = until`). `until` no passado → `400`; nota → `409`.
+- `POST /reminders/:id/dismiss` → `Reminder` (`status = dismissed`, não dispara mais).
 - `GET /tags` → `{ items: { name: string, count: number }[] }`
 
 ## Busca — `/search`

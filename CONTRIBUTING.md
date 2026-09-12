@@ -60,6 +60,8 @@ O mesmo plugin resolve a sessão em `onRequest` (quando há cookie e a rota não
 
 O módulo `modules/reminders` segue o padrão routes → service → repository. O service valida a combinação `kind`/`remindAt`/`recurrence`, normaliza tags (`tags.ts`), calcula `nextFireAt` e devolve `404` para ids de outros usuários; o repository sempre filtra `userId` e `deletedAt is null`. A listagem usa keyset pagination sobre `(remindAt, createdAt, id)` codificada em `cursor.ts`; por isso `createdAt`/`updatedAt` são gravados pela aplicação com precisão de milissegundos, e não pelo `now()` do Postgres.
 
+Recorrência fica em `modules/reminders/recurrence.ts`: `nextOccurrence(schedule, after, timezone)` é pura e calcula no relógio de parede do usuário (`TZDate` do `@date-fns/tz`), preservando o horário local em mudanças de horário de verão e derivando fim de mês sempre da data âncora (`remindAt` nunca muda; `nextFireAt` avança). Escreva os testes de recorrência com fusos que têm DST (`America/New_York`) além de `America/Sao_Paulo`.
+
 O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md); o roadmap do backend em [`docs/tasks/backend.md`](docs/tasks/backend.md).
 
 ## Estrutura do frontend

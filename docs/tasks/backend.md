@@ -73,10 +73,10 @@ Regras de execução:
 - Aceite: testes de cada rota + isolamento + validações.
 
 ### 2.3 Estado e recorrência — `feat(reminders): add done/snooze/dismiss and recurrence`
-- [ ] `POST /reminders/:id/done|snooze|dismiss`.
-- [ ] `reminders/recurrence.ts`: `nextOccurrence(reminder, after: Date, tz: string): Date | null` puro (daily/weekly/monthly/yearly, `interval`, `byWeekday`, `until`). Usar `date-fns` + `@date-fns/tz` (ou `Temporal` se estável no Node 24).
-- [ ] `done` em lembrete recorrente → calcula próxima ocorrência, mantém `status=scheduled`, atualiza `nextFireAt`. Sem próxima → `done`.
-- [ ] `snooze` → `status=snoozed`, `nextFireAt = until`.
+- [x] `POST /reminders/:id/done|snooze|dismiss`.
+- [x] `reminders/recurrence.ts`: `nextOccurrence(reminder, after: Date, tz: string): Date | null` puro (daily/weekly/monthly/yearly, `interval`, `byWeekday`, `until`). Usar `date-fns` + `@date-fns/tz` (ou `Temporal` se estável no Node 24).
+- [x] `done` em lembrete recorrente → calcula próxima ocorrência, mantém `status=scheduled`, atualiza `nextFireAt`. Sem próxima → `done`.
+- [x] `snooze` → `status=snoozed`, `nextFireAt = until`.
 - Aceite: testes unitários de `nextOccurrence` (DST, fim de mês, `until`); testes das rotas.
 
 ### 2.4 Indexação no ES — `feat(search): index reminders on write`

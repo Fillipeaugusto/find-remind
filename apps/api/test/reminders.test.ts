@@ -45,9 +45,17 @@ describe("reminders routes", () => {
       ["GET", "/reminders/00000000-0000-4000-8000-000000000000"],
       ["PATCH", "/reminders/00000000-0000-4000-8000-000000000000"],
       ["DELETE", "/reminders/00000000-0000-4000-8000-000000000000"],
+      ["POST", "/reminders/00000000-0000-4000-8000-000000000000/done"],
+      ["POST", "/reminders/00000000-0000-4000-8000-000000000000/snooze"],
+      ["POST", "/reminders/00000000-0000-4000-8000-000000000000/dismiss"],
       ["GET", "/tags"],
     ] as const)("%s %s responds 401 without a session", async (method, url) => {
-      const payload = method === "GET" || method === "DELETE" ? undefined : { title: "x", kind: "note" };
+      const payload =
+        method === "GET" || method === "DELETE"
+          ? undefined
+          : url.endsWith("/snooze")
+            ? { until: "2030-01-01T00:00:00.000Z" }
+            : { title: "x", kind: "note" };
       const res = await app.inject({ method, url, payload });
 
       expect(res.statusCode).toBe(401);
@@ -110,6 +118,33 @@ describe("reminders routes", () => {
       const created = await createReminder({ remindAt: past });
 
       expect(created).toMatchObject({ remindAt: past, nextFireAt: past });
+    });
+
+    it("starts a weekly reminder on the first listed weekday", async () => {
+      // Wed Sep 9 2026 anchored, firing on Fridays: first occurrence is Fri Sep 11.
+      const created = await createReminder({
+        remindAt: "2026-09-09T12:00:00.000Z",
+        recurrence: { freq: "weekly", interval: 1, byWeekday: [5] },
+      });
+
+      expect(created.nextFireAt).toBe("2026-09-11T12:00:00.000Z");
+    });
+
+    it("rejects a recurrence that ends before its first occurrence", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/reminders",
+        headers: { cookie: session.cookie },
+        payload: {
+          title: "Curto",
+          kind: "reminder",
+          remindAt: REMIND_AT,
+          recurrence: { freq: "daily", interval: 1, until: "2029-12-31T00:00:00.000Z" },
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json().message).toContain("until");
     });
 
     it("rejects a reminder without remindAt", async () => {
@@ -325,6 +360,145 @@ describe("reminders routes", () => {
       await app.inject({ method: "DELETE", url: `/reminders/${created.id}`, headers: { cookie: session.cookie } });
       const again = await app.inject({ method: "DELETE", url: `/reminders/${created.id}`, headers: { cookie: session.cookie } });
       expect(again.statusCode).toBe(404);
+    });
+  });
+
+  describe("POST /reminders/:id/done", () => {
+    it("completes a one-off reminder", async () => {
+      const created = await createReminder({});
+
+      const res = await app.inject({ method: "POST", url: `/reminders/${created.id}/done`, headers: { cookie: session.cookie } });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ id: created.id, status: "done", nextFireAt: null, snoozedUntil: null });
+      const list = await app.inject({ method: "GET", url: "/reminders?status=done", headers: { cookie: session.cookie } });
+      expect(list.json().items).toHaveLength(1);
+    });
+
+    it("moves a recurring reminder to the next occurrence in the user's time zone", async () => {
+      const tz = await signUpAndLogin(app, { email: "carla@example.com", timezone: "America/Sao_Paulo" });
+      const past = "2020-01-01T12:00:00.000Z";
+      const created = await createReminder({ remindAt: past, recurrence: { freq: "daily", interval: 1 } }, tz.cookie);
+      expect(created.nextFireAt).toBe(past);
+
+      const res = await app.inject({ method: "POST", url: `/reminders/${created.id}/done`, headers: { cookie: tz.cookie } });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body).toMatchObject({ status: "scheduled", remindAt: past, snoozedUntil: null });
+      expect(new Date(body.nextFireAt).getTime()).toBeGreaterThan(Date.now());
+      expect(new Date(body.nextFireAt).getTime() - Date.now()).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
+      expect(body.nextFireAt).toMatch(/T12:00:00\.000Z$/);
+    });
+
+    it("finishes a recurring reminder that has no occurrence left", async () => {
+      const created = await createReminder({
+        remindAt: "2020-01-01T12:00:00.000Z",
+        recurrence: { freq: "daily", interval: 1, until: "2020-01-05T12:00:00.000Z" },
+      });
+
+      const res = await app.inject({ method: "POST", url: `/reminders/${created.id}/done`, headers: { cookie: session.cookie } });
+
+      expect(res.json()).toMatchObject({ status: "done", nextFireAt: null });
+    });
+
+    it("also works for notes and responds 404 for other users", async () => {
+      const note = await createReminder({ kind: "note", remindAt: undefined });
+      const other = await signUpAndLogin(app, { email: "bia@example.com" });
+
+      const foreign = await app.inject({ method: "POST", url: `/reminders/${note.id}/done`, headers: { cookie: other.cookie } });
+      expect(foreign.statusCode).toBe(404);
+
+      const res = await app.inject({ method: "POST", url: `/reminders/${note.id}/done`, headers: { cookie: session.cookie } });
+      expect(res.json()).toMatchObject({ status: "done", nextFireAt: null });
+    });
+  });
+
+  describe("POST /reminders/:id/snooze", () => {
+    it("snoozes until the given instant", async () => {
+      const created = await createReminder({});
+      const until = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+      const res = await app.inject({
+        method: "POST",
+        url: `/reminders/${created.id}/snooze`,
+        headers: { cookie: session.cookie },
+        payload: { until },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ status: "snoozed", snoozedUntil: until, nextFireAt: until, remindAt: REMIND_AT });
+    });
+
+    it("clears the snooze when completed", async () => {
+      const created = await createReminder({});
+      const until = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      await app.inject({ method: "POST", url: `/reminders/${created.id}/snooze`, headers: { cookie: session.cookie }, payload: { until } });
+
+      const res = await app.inject({ method: "POST", url: `/reminders/${created.id}/done`, headers: { cookie: session.cookie } });
+
+      expect(res.json()).toMatchObject({ status: "done", snoozedUntil: null, nextFireAt: null });
+    });
+
+    it("rejects an instant in the past or an invalid body", async () => {
+      const created = await createReminder({});
+
+      for (const payload of [{ until: "2020-01-01T00:00:00.000Z" }, { until: "logo" }, {}]) {
+        const res = await app.inject({
+          method: "POST",
+          url: `/reminders/${created.id}/snooze`,
+          headers: { cookie: session.cookie },
+          payload,
+        });
+        expect(res.statusCode).toBe(400);
+      }
+    });
+
+    it("refuses to snooze a note", async () => {
+      const note = await createReminder({ kind: "note", remindAt: undefined });
+
+      const res = await app.inject({
+        method: "POST",
+        url: `/reminders/${note.id}/snooze`,
+        headers: { cookie: session.cookie },
+        payload: { until: new Date(Date.now() + 60_000).toISOString() },
+      });
+
+      expect(res.statusCode).toBe(409);
+    });
+
+    it("responds 404 for another user's reminder", async () => {
+      const created = await createReminder({});
+      const other = await signUpAndLogin(app, { email: "bia@example.com" });
+
+      const res = await app.inject({
+        method: "POST",
+        url: `/reminders/${created.id}/snooze`,
+        headers: { cookie: other.cookie },
+        payload: { until: new Date(Date.now() + 60_000).toISOString() },
+      });
+
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
+  describe("POST /reminders/:id/dismiss", () => {
+    it("dismisses the reminder and stops it from firing", async () => {
+      const created = await createReminder({ recurrence: { freq: "weekly", interval: 1 } });
+
+      const res = await app.inject({ method: "POST", url: `/reminders/${created.id}/dismiss`, headers: { cookie: session.cookie } });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ status: "dismissed", nextFireAt: null, snoozedUntil: null });
+    });
+
+    it("responds 404 for another user's reminder", async () => {
+      const created = await createReminder({});
+      const other = await signUpAndLogin(app, { email: "bia@example.com" });
+
+      const res = await app.inject({ method: "POST", url: `/reminders/${created.id}/dismiss`, headers: { cookie: other.cookie } });
+
+      expect(res.statusCode).toBe(404);
     });
   });
 

@@ -75,3 +75,7 @@ export type UpdateReminderInput = z.infer<typeof updateReminderSchema>;
 export type ListRemindersQuery = z.infer<typeof listRemindersQuerySchema>;
 export type ReminderPage = z.infer<typeof reminderPageSchema>;
 export type TagsResponse = z.infer<typeof tagsResponseSchema>;
+
+export const snoozeReminderSchema = z.object({ until: isoDatetime });
+
+export type SnoozeReminderInput = z.infer<typeof snoozeReminderSchema>;
