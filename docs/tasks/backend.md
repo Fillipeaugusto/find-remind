@@ -104,8 +104,8 @@ Regras de execução:
 ## Fase 4 — Provedores de IA
 
 ### 4.1 Schema + criptografia — `feat(ai): add ai providers table and key encryption`
-- [ ] `schema/ai.ts`: `ai_provider` (id, userId, kind, label, baseUrl, apiKeyEncrypted, enabled, defaultChatModel, defaultEmbeddingModel, lastCheckedAt, lastCheckStatus, lastCheckError, createdAt, updatedAt) e `ai_user_settings` (userId pk, defaultChat, defaultEmbedding).
-- [ ] `ai/crypto.ts`: AES-256-GCM com `AI_KEYS_ENCRYPTION_KEY` (derivar com `scrypt`/`hkdf`), formato `v1:<iv>:<tag>:<ciphertext>` base64.
+- [x] `schema/ai.ts`: `ai_provider` (id, userId, kind, label, baseUrl, apiKeyEncrypted, enabled, defaultChatModel, defaultEmbeddingModel, lastCheckedAt, lastCheckStatus, lastCheckError, createdAt, updatedAt) e `ai_user_settings` (userId pk, defaultChat, defaultEmbedding).
+- [x] `ai/crypto.ts`: AES-256-GCM com `AI_KEYS_ENCRYPTION_KEY` (derivar com `scrypt`/`hkdf`), formato `v1:<iv>:<tag>:<ciphertext>` base64.
 - Aceite: testes de roundtrip e de rejeição de payload adulterado; migration aplicada.
 
 ### 4.2 Registry de providers — `feat(ai): add provider registry with ai sdk`
