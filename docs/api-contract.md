@@ -1,0 +1,145 @@
+# Contrato da API
+
+Base URL: `http://localhost:3001`. Todas as rotas (exceto `/health` e `/api/auth/*`) exigem sessão válida (cookie do Better Auth) e respondem `401` sem ela. Respostas de erro seguem o formato do `@fastify/sensible`: `{ statusCode, error, message }`.
+
+Datas sempre em ISO 8601 UTC. O fuso do usuário fica em `user.timezone` e é usado para interpretar linguagem natural ("segunda passada").
+
+Paginação por cursor: `?limit=20&cursor=<opaque>` → `{ items: [...], nextCursor: string | null }`.
+
+## Auth — `/api/auth/*` (Better Auth)
+
+Rotas geradas pelo Better Auth (email/senha). O frontend usa o client oficial (`better-auth/react`).
+
+- `POST /api/auth/sign-up/email` `{ name, email, password }`
+- `POST /api/auth/sign-in/email` `{ email, password }`
+- `POST /api/auth/sign-out`
+- `GET /api/auth/get-session`
+
+## Perfil — `/me`
+
+- `GET /me` → `{ id, name, email, image, timezone, createdAt }`
+- `PATCH /me` `{ name?, timezone? }` → mesmo objeto
+
+## Lembretes — `/reminders`
+
+```ts
+type Reminder = {
+  id: string
+  title: string
+  content: string | null          // markdown
+  kind: "reminder" | "note"       // note = sem alerta
+  remindAt: string | null         // ISO; obrigatório quando kind = reminder
+  recurrence: null | {
+    freq: "daily" | "weekly" | "monthly" | "yearly"
+    interval: number              // a cada N
+    byWeekday?: number[]          // 0-6, para weekly
+    until?: string | null
+  }
+  status: "scheduled" | "done" | "dismissed" | "snoozed"
+  snoozedUntil: string | null
+  tags: string[]
+  createdAt: string
+  updatedAt: string
+}
+```
+
+- `GET /reminders?status=&tag=&from=&to=&limit=&cursor=` → paginado, ordenado por `remindAt` (nulls por último) e `createdAt desc`
+- `POST /reminders` `{ title, content?, kind, remindAt?, recurrence?, tags? }` → `201 Reminder`
+- `GET /reminders/:id` → `Reminder`
+- `PATCH /reminders/:id` (parcial) → `Reminder`
+- `DELETE /reminders/:id` → `204`
+- `POST /reminders/:id/done` → `Reminder`
+- `POST /reminders/:id/snooze` `{ until }` → `Reminder`
+- `POST /reminders/:id/dismiss` → `Reminder`
+- `GET /tags` → `{ items: { name: string, count: number }[] }`
+
+## Busca — `/search`
+
+- `GET /search?q=&mode=keyword|semantic|hybrid&from=&to=&tags=&limit=` →
+  ```ts
+  { items: { reminder: Reminder, score: number, highlights?: string[] }[], mode, tookMs, cached: boolean }
+  ```
+  `mode` padrão: `hybrid`. `semantic`/`hybrid` exigem um provider de IA configurado com modelo de embeddings; caso contrário `409 { code: "NO_EMBEDDING_PROVIDER" }`.
+- `POST /search/ask` `{ question }` → busca em linguagem natural. O backend extrai filtros (intervalo de datas no fuso do usuário, tags, status) com o LLM, roda a busca híbrida e devolve:
+  ```ts
+  { answer: string, filters: { from?, to?, tags?, status? }, items: SearchItem[] }
+  ```
+
+## Alertas — `/alerts`
+
+```ts
+type Alert = {
+  id: string
+  reminderId: string
+  reminder: Pick<Reminder, "id" | "title" | "remindAt">
+  firedAt: string
+  readAt: string | null
+}
+```
+
+- `GET /alerts?unread=true&limit=&cursor=` → paginado
+- `POST /alerts/:id/read` → `Alert`
+- `POST /alerts/read-all` → `204`
+- `GET /alerts/stream` → **SSE**. Eventos: `alert` (payload `Alert`), `ping` a cada 25s.
+
+## Provedores de IA — `/ai/providers`
+
+```ts
+type ProviderKind = "ollama" | "openai" | "anthropic" | "google"
+
+type AiProvider = {
+  id: string
+  kind: ProviderKind
+  label: string
+  baseUrl: string | null          // ollama e endpoints compatíveis
+  hasApiKey: boolean              // nunca devolver a chave
+  enabled: boolean
+  defaultChatModel: string | null
+  defaultEmbeddingModel: string | null
+  lastCheckedAt: string | null
+  lastCheckStatus: "ok" | "error" | null
+  lastCheckError: string | null
+  createdAt: string
+}
+```
+
+- `GET /ai/providers` → `{ items: AiProvider[] }`
+- `POST /ai/providers` `{ kind, label, baseUrl?, apiKey?, defaultChatModel?, defaultEmbeddingModel? }` → `201 AiProvider`
+- `PATCH /ai/providers/:id` (parcial; `apiKey` só sobrescreve se enviado) → `AiProvider`
+- `DELETE /ai/providers/:id` → `204`
+- `POST /ai/providers/:id/test` → testa conexão, atualiza `lastCheck*` → `AiProvider`
+- `GET /ai/providers/:id/models` → `{ chat: { id: string, label: string }[], embedding: { id: string, label: string }[] }` (Ollama: `/api/tags`; demais: lista fixa curada + o que a API do provider expõe)
+- `GET /ai/models` → modelos **disponíveis para uso** = união dos providers `enabled` com `lastCheckStatus = ok`:
+  ```ts
+  { chat: { providerId, providerKind, model, label }[], embedding: {...}[], defaults: { chat: string | null, embedding: string | null } }
+  ```
+- `PUT /ai/defaults` `{ chat?: "providerId:model", embedding?: "providerId:model" }` → `204`
+
+## Chat — `/chat`
+
+```ts
+type Conversation = { id: string, title: string | null, model: string, createdAt: string, updatedAt: string }
+```
+
+- `GET /chat/conversations?limit=&cursor=` → paginado
+- `POST /chat/conversations` `{ model?: "providerId:model" }` → `201 Conversation`
+- `GET /chat/conversations/:id` → `{ conversation, messages: UIMessage[] }` (formato `UIMessage` do AI SDK)
+- `DELETE /chat/conversations/:id` → `204`
+- `POST /chat/conversations/:id/messages` `{ messages: UIMessage[] }` → **stream** no protocolo UI Message Stream do AI SDK (compatível com `useChat` do `@ai-sdk/react`). Persiste a mensagem do usuário e a resposta completa ao terminar.
+
+Ferramentas (tools) disponíveis para o modelo no chat — o frontend renderiza os `tool-*` parts como UI:
+
+| tool | input | output (renderização) |
+|---|---|---|
+| `searchReminders` | `{ query, from?, to?, tags?, status? }` | lista de lembretes → **tabela/cards** |
+| `getReminder` | `{ id }` | `Reminder` → **card** |
+| `createReminder` | `{ title, content?, remindAt?, recurrence?, tags? }` | `Reminder` criado → **card com botões** (abrir, desfazer) |
+| `updateReminder` | `{ id, patch }` | `Reminder` |
+| `completeReminder` | `{ id }` | `Reminder` |
+| `resolveDateRange` | `{ expression }` ("segunda passada", "semana que vem") | `{ from, to, label }` |
+| `listTags` | `{}` | tags com contagem → **chips** |
+
+## Health
+
+- `GET /health` → `{ status: "ok", uptime, timestamp }`
+- `GET /health/ready` → `{ status: "ok" | "degraded", checks: { postgres, redis, elasticsearch } }`
