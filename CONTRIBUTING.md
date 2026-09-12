@@ -58,6 +58,8 @@ A autenticação usa Better Auth. `createAuth({ db, env })` em `apps/api/src/aut
 
 O mesmo plugin resolve a sessão em `onRequest` (quando há cookie e a rota não é `/health*`, `/api/auth/*` ou `/docs*`) e popula `request.user` e `request.session` (`null` sem sessão). Rotas protegidas usam `app.requireAuth` como `preHandler` — em módulos inteiros, `app.addHook("preHandler", app.requireAuth)` no topo do plugin de rotas. Nos testes, `signUpAndLogin(app)` de `apps/api/test/auth.ts` cria um usuário e devolve `{ cookie, user }` prontos para o header `cookie`; `createTestApp({ configure })` permite registrar rotas extras antes do `ready()`.
 
+O módulo `modules/reminders` segue o padrão routes → service → repository. O service valida a combinação `kind`/`remindAt`/`recurrence`, normaliza tags (`tags.ts`), calcula `nextFireAt` e devolve `404` para ids de outros usuários; o repository sempre filtra `userId` e `deletedAt is null`. A listagem usa keyset pagination sobre `(remindAt, createdAt, id)` codificada em `cursor.ts`; por isso `createdAt`/`updatedAt` são gravados pela aplicação com precisão de milissegundos, e não pelo `now()` do Postgres.
+
 O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md); o roadmap do backend em [`docs/tasks/backend.md`](docs/tasks/backend.md).
 
 ## Estrutura do frontend

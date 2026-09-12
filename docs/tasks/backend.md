@@ -67,9 +67,9 @@ Regras de execução:
 - Aceite: `pnpm db:migrate` aplica limpo; typecheck ok.
 
 ### 2.2 CRUD — `feat(reminders): add reminders crud`
-- [ ] `modules/reminders`: schemas Zod (contrato), repository, service, routes (`GET/POST /reminders`, `GET/PATCH/DELETE /reminders/:id`, `GET /tags`).
-- [ ] Regras: `kind=reminder` exige `remindAt`; `remindAt` no passado é permitido mas gera alerta imediato; `DELETE` é soft delete (`deletedAt`); tags normalizadas (lowercase, trim, únicas); paginação por cursor (`createdAt,id`).
-- [ ] Isolamento por usuário: toda query filtra `userId = request.user.id`; acessar id de outro usuário → 404.
+- [x] `modules/reminders`: schemas Zod (contrato), repository, service, routes (`GET/POST /reminders`, `GET/PATCH/DELETE /reminders/:id`, `GET /tags`).
+- [x] Regras: `kind=reminder` exige `remindAt`; `remindAt` no passado é permitido mas gera alerta imediato; `DELETE` é soft delete (`deletedAt`); tags normalizadas (lowercase, trim, únicas); paginação por cursor (`createdAt,id`).
+- [x] Isolamento por usuário: toda query filtra `userId = request.user.id`; acessar id de outro usuário → 404.
 - Aceite: testes de cada rota + isolamento + validações.
 
 ### 2.3 Estado e recorrência — `feat(reminders): add done/snooze/dismiss and recurrence`

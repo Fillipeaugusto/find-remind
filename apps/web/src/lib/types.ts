@@ -27,6 +27,7 @@ export type Reminder = {
   recurrence: Recurrence | null;
   status: ReminderStatus;
   snoozedUntil: string | null;
+  nextFireAt: string | null;
   tags: string[];
   createdAt: string;
   updatedAt: string;

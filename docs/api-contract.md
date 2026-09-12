@@ -37,17 +37,18 @@ type Reminder = {
   }
   status: "scheduled" | "done" | "dismissed" | "snoozed"
   snoozedUntil: string | null
+  nextFireAt: string | null       // próxima vez que o alerta dispara; null para notas e itens concluídos/dispensados
   tags: string[]
   createdAt: string
   updatedAt: string
 }
 ```
 
-- `GET /reminders?status=&tag=&from=&to=&limit=&cursor=` → paginado, ordenado por `remindAt` (nulls por último) e `createdAt desc`
-- `POST /reminders` `{ title, content?, kind, remindAt?, recurrence?, tags? }` → `201 Reminder`
-- `GET /reminders/:id` → `Reminder`
-- `PATCH /reminders/:id` (parcial) → `Reminder`
-- `DELETE /reminders/:id` → `204`
+- `GET /reminders?status=&tag=&from=&to=&limit=&cursor=` → paginado, ordenado por `remindAt asc` (nulls por último) e `createdAt desc`; `from`/`to` filtram por `remindAt`
+- `POST /reminders` `{ title, content?, kind, remindAt?, recurrence?, tags? }` → `201 Reminder`. `kind = reminder` exige `remindAt` (pode estar no passado: o alerta dispara na hora); `recurrence` só em `kind = reminder`; tags são normalizadas (lowercase, trim, sem duplicatas).
+- `GET /reminders/:id` → `Reminder` (`404` para id inexistente ou de outro usuário)
+- `PATCH /reminders/:id` (parcial) → `Reminder`. Mudar `kind`, `remindAt` ou `recurrence` reagenda o lembrete (`status = scheduled`, `snoozedUntil = null`). `tags` substitui a lista inteira.
+- `DELETE /reminders/:id` → `204` (soft delete)
 - `POST /reminders/:id/done` → `Reminder`
 - `POST /reminders/:id/snooze` `{ until }` → `Reminder`
 - `POST /reminders/:id/dismiss` → `Reminder`

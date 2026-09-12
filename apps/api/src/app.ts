@@ -14,6 +14,7 @@ import {
 import type { Env } from "./config/env.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
 import { meRoutes } from "./modules/me/me.routes.js";
+import { remindersRoutes } from "./modules/reminders/reminders.routes.js";
 import authPlugin from "./plugins/auth.js";
 import dbPlugin from "./plugins/db.js";
 import elasticsearchPlugin from "./plugins/elasticsearch.js";
@@ -58,6 +59,7 @@ export async function buildApp({ env, logger = true }: BuildAppOptions): Promise
 
     await app.register(healthRoutes);
     await app.register(meRoutes);
+    await app.register(remindersRoutes);
 
     return app;
   } catch (error) {

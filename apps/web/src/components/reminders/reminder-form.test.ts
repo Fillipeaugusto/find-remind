@@ -11,6 +11,7 @@ const base: Reminder = {
   recurrence: { freq: "weekly", interval: 2, byWeekday: [1, 4], until: new Date(2026, 11, 31, 23, 59, 59).toISOString() },
   status: "scheduled",
   snoozedUntil: null,
+  nextFireAt: "2026-09-15T13:00:00.000Z",
   tags: ["saude"],
   createdAt: "2026-09-01T00:00:00.000Z",
   updatedAt: "2026-09-01T00:00:00.000Z",
