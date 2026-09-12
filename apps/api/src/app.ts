@@ -13,6 +13,7 @@ import {
 } from "fastify-type-provider-zod";
 import type { Env } from "./config/env.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
+import { meRoutes } from "./modules/me/me.routes.js";
 import authPlugin from "./plugins/auth.js";
 import dbPlugin from "./plugins/db.js";
 import elasticsearchPlugin from "./plugins/elasticsearch.js";
@@ -56,6 +57,7 @@ export async function buildApp({ env, logger = true }: BuildAppOptions): Promise
     await app.register(swaggerUi, { routePrefix: "/docs" });
 
     await app.register(healthRoutes);
+    await app.register(meRoutes);
 
     return app;
   } catch (error) {

@@ -54,7 +54,7 @@ Regras de execução:
 - Aceite: rota protegida sem cookie → 401; com cookie → 200 e `request.user.id` correto.
 
 ### 1.3 Perfil — `feat(api): add /me endpoints`
-- [ ] `modules/me`: `GET /me`, `PATCH /me` (`name`, `timezone` validado contra `Intl.supportedValuesOf("timeZone")`).
+- [x] `modules/me`: `GET /me`, `PATCH /me` (`name`, `timezone` validado contra `Intl.supportedValuesOf("timeZone")`).
 - Aceite: testes de leitura e atualização; timezone inválido → 400.
 
 ---
