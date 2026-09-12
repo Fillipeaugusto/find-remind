@@ -14,6 +14,7 @@ import {
 import type { Env } from "./config/env.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
 import dbPlugin from "./plugins/db.js";
+import redisPlugin from "./plugins/redis.js";
 
 export type App = FastifyInstance;
 
@@ -37,6 +38,7 @@ export async function buildApp({ env, logger = true }: BuildAppOptions): Promise
   await app.register(cors, { origin: [env.WEB_URL], credentials: true });
   await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
   await app.register(dbPlugin);
+  await app.register(redisPlugin);
 
   await app.register(swagger, {
     openapi: {

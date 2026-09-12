@@ -19,8 +19,8 @@ Regras de execução:
 - Aceite: `createTestApp()` sobe com Postgres real; teste que faz `SELECT 1` via `app.db`.
 
 ### 0.2 Plugin Redis — `feat(api): add redis plugin`
-- [ ] `plugins/redis.ts` com `ioredis`; decora `app.redis`; `onClose` → `quit()`.
-- [ ] Helper `cache.ts`: `cached<T>(key, ttlSeconds, fn)` + `invalidate(pattern)` (usar `SCAN`, não `KEYS`).
+- [x] `plugins/redis.ts` com `ioredis`; decora `app.redis`; `onClose` → `quit()`.
+- [x] Helper `cache.ts`: `cached<T>(key, ttlSeconds, fn)` + `invalidate(pattern)` (usar `SCAN`, não `KEYS`).
 - Aceite: teste de `cached` (hit/miss/ttl) contra Redis real.
 
 ### 0.3 Plugin Elasticsearch — `feat(search): add elasticsearch plugin and index bootstrap`

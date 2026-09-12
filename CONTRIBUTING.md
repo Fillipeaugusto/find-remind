@@ -47,6 +47,8 @@ Regras:
 - Novas variáveis de ambiente: adicionar em `config/env.ts`, `.env.example`, `docker-compose.yml` e `.github/workflows/ci.yml`.
 - Migrations: alterar o schema em `packages/db/src/schema`, rodar `pnpm db:generate -- --name <nome>`, commitar o SQL gerado. Nunca editar migration já commitada.
 
+O Redis fica disponível em `app.redis`. Para cache de valores JSON, use `app.cache.cached(key, ttlSeconds, fn)` com TTL inteiro positivo em segundos; `fn` só executa quando a chave está ausente. Use datas como strings ISO. `app.cache.invalidate(pattern)` remove as chaves correspondentes com `SCAN`.
+
 O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md); o roadmap do backend em [`docs/tasks/backend.md`](docs/tasks/backend.md).
 
 ## Testes
@@ -64,6 +66,8 @@ docker compose exec -T postgres createdb -U findremind findremind_test
 ```
 
 `createTestApp()` aplica as migrations antes de disponibilizar o app. Os helpers de banco exigem `NODE_ENV=test` e o banco `findremind_test`. Use `truncateAll(app.db)` de `apps/api/test/db.ts` entre testes; ele preserva o histórico de migrations. Os arquivos de teste executam em sequência para evitar disputas por esse banco compartilhado.
+
+Os testes do app também exigem Redis ativo (`pnpm docker:up`). Os testes de cache usam prefixos exclusivos e removem apenas suas próprias chaves ao terminar.
 
 ## Commits
 
