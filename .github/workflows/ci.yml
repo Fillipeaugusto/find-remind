@@ -81,6 +81,7 @@ jobs:
       DATABASE_URL: postgres://findremind:findremind@localhost:5432/findremind_test
       ELASTICSEARCH_URL: http://localhost:9200
       REDIS_URL: redis://localhost:6379
+      RUN_WORKERS: "false"
       BETTER_AUTH_SECRET: ci-secret-ci-secret-ci-secret
       AI_KEYS_ENCRYPTION_KEY: ci-encryption-key-ci-encryption-key
     steps:

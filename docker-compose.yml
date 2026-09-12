@@ -67,6 +67,7 @@ services:
       DATABASE_URL: postgres://findremind:findremind@postgres:5432/findremind
       ELASTICSEARCH_URL: http://elasticsearch:9200
       REDIS_URL: redis://redis:6379
+      RUN_WORKERS: ${RUN_WORKERS:-true}
     ports:
       - "3001:3001"
     depends_on:

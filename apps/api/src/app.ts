@@ -15,6 +15,7 @@ import type { Env } from "./config/env.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
 import dbPlugin from "./plugins/db.js";
 import elasticsearchPlugin from "./plugins/elasticsearch.js";
+import queuePlugin from "./plugins/queue.js";
 import redisPlugin from "./plugins/redis.js";
 
 export type App = FastifyInstance;
@@ -42,6 +43,7 @@ export async function buildApp({ env, logger = true }: BuildAppOptions): Promise
     await app.register(dbPlugin);
     await app.register(redisPlugin);
     await app.register(elasticsearchPlugin);
+    await app.register(queuePlugin);
 
     await app.register(swagger, {
       openapi: {

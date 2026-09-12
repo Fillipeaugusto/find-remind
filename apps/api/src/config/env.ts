@@ -10,13 +10,17 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   ELASTICSEARCH_URL: z.string().url().default("http://localhost:9200"),
   REDIS_URL: z.string().url().default("redis://localhost:6379"),
+  RUN_WORKERS: z.enum(["true", "false"]).optional(),
 
   BETTER_AUTH_SECRET: z.string().min(16),
   BETTER_AUTH_URL: z.string().url().default("http://localhost:3001"),
 
   AI_KEYS_ENCRYPTION_KEY: z.string().min(16),
   OLLAMA_BASE_URL: z.string().url().default("http://localhost:11434"),
-});
+}).transform(({ RUN_WORKERS, ...env }) => ({
+  ...env,
+  RUN_WORKERS: RUN_WORKERS === undefined ? env.NODE_ENV !== "test" : RUN_WORKERS === "true",
+}));
 
 export type Env = z.infer<typeof envSchema>;
 

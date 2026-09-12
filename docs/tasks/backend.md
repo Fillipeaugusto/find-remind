@@ -29,8 +29,8 @@ Regras de execução:
 - Aceite: teste que `ensureIndex()` cria e não recria; mapping validado.
 
 ### 0.4 Filas (BullMQ) — `feat(api): add bullmq queue plugin`
-- [ ] `plugins/queue.ts`: cria `Queue`s e `Worker`s registrados em `queues/`. Decora `app.queues`. Workers só sobem quando `env.RUN_WORKERS=true` (padrão `true` em dev, `false` em test).
-- [ ] Adicionar `RUN_WORKERS` em `env.ts`, `.env.example`, compose, CI.
+- [x] `plugins/queue.ts`: cria `Queue`s e `Worker`s registrados em `queues/`. Decora `app.queues`. Workers só sobem quando `env.RUN_WORKERS=true` (padrão `true` em dev, `false` em test).
+- [x] Adicionar `RUN_WORKERS` em `env.ts`, `.env.example`, compose, CI.
 - Aceite: teste enfileira job e processa com worker inline.
 
 ### 0.5 Readiness — `feat(api): add readiness endpoint`
