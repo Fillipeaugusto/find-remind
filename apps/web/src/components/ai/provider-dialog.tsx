@@ -22,7 +22,8 @@ import { useCreateProvider, useProviderModels, useUpdateProvider } from "@/hooks
 import { errorMessage } from "@/lib/api";
 import type { AiProvider, AiProviderInput, ProviderKind } from "@/lib/types";
 import { ModelField } from "./model-field";
-import { PROVIDER_KINDS, PROVIDER_KIND_OPTIONS } from "./provider-kinds";
+import { mergeModelOptions } from "./model-options";
+import { PROVIDER_KINDS, PROVIDER_KIND_OPTIONS, isOllamaCloud } from "./provider-kinds";
 
 const schema = z
   .object({
@@ -68,8 +69,23 @@ export function ProviderDialog({
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: toValues(provider) });
   const { errors } = form.formState;
   const kind = useWatch({ control: form.control, name: "kind" });
+  const baseUrl = useWatch({ control: form.control, name: "baseUrl" });
   const meta = PROVIDER_KINDS[kind];
   const pending = create.isPending || update.isPending;
+  const ollamaCloud = isOllamaCloud(kind, baseUrl);
+  const supportsEmbedding = meta.suggestedModels.embedding.length > 0 && !ollamaCloud;
+
+  // Só a edição consulta o provedor; no cadastro a lista vem das sugestões.
+  const listed = editing && models.isSuccess ? models.data : undefined;
+  const missingSuffix = kind === "ollama" ? "não instalado" : undefined;
+  const chatOptions = mergeModelOptions(listed?.chat, meta.suggestedModels.chat, missingSuffix);
+  const embeddingOptions = mergeModelOptions(listed?.embedding, meta.suggestedModels.embedding, missingSuffix);
+  const embeddingHint =
+    kind !== "ollama"
+      ? undefined
+      : listed && listed.embedding.length === 0
+        ? "Nenhum modelo de embeddings instalado. Baixe um (ex.: ollama pull nomic-embed-text) e teste a conexão de novo."
+        : "Precisa estar instalado no Ollama (ollama pull <modelo>).";
 
   useEffect(() => {
     if (open) form.reset(toValues(provider));
@@ -82,6 +98,8 @@ export function ProviderDialog({
       form.setValue("label", PROVIDER_KINDS[next].label);
     }
     form.setValue("baseUrl", PROVIDER_KINDS[next].defaultBaseUrl ?? "");
+    form.setValue("defaultChatModel", "");
+    form.setValue("defaultEmbeddingModel", "");
   };
 
   const submit = form.handleSubmit(async (values) => {
@@ -93,7 +111,7 @@ export function ProviderDialog({
       label: values.label,
       baseUrl: meta.supportsBaseUrl && values.baseUrl ? values.baseUrl : null,
       defaultChatModel: values.defaultChatModel || null,
-      defaultEmbeddingModel: values.defaultEmbeddingModel || null,
+      defaultEmbeddingModel: supportsEmbedding && values.defaultEmbeddingModel ? values.defaultEmbeddingModel : null,
       ...(values.apiKey.trim() ? { apiKey: values.apiKey.trim() } : {}),
     };
     try {
@@ -147,9 +165,15 @@ export function ProviderDialog({
               {...form.register("baseUrl")}
             />
           ) : null}
-          {meta.needsApiKey ? (
+          {meta.needsApiKey || meta.optionalApiKey ? (
             <PasswordInput
-              label={editing && provider?.hasApiKey ? "Nova chave de API (opcional)" : "Chave de API"}
+              label={
+                editing && provider?.hasApiKey
+                  ? "Nova chave de API (opcional)"
+                  : meta.needsApiKey
+                    ? "Chave de API"
+                    : "Chave de API (opcional)"
+              }
               autoComplete="off"
               error={errors.apiKey?.message}
               hint={meta.apiKeyHint}
@@ -166,28 +190,38 @@ export function ProviderDialog({
                   label="Modelo de chat"
                   value={field.value}
                   onChange={field.onChange}
-                  models={models.data?.chat}
+                  models={chatOptions}
                   error={errors.defaultChatModel?.message}
                 />
               )}
             />
-            <Controller
-              control={form.control}
-              name="defaultEmbeddingModel"
-              render={({ field }) => (
-                <ModelField
-                  label="Modelo de embeddings"
-                  value={field.value}
-                  onChange={field.onChange}
-                  models={models.data?.embedding}
-                  error={errors.defaultEmbeddingModel?.message}
-                />
-              )}
-            />
+            {supportsEmbedding ? (
+              <Controller
+                control={form.control}
+                name="defaultEmbeddingModel"
+                render={({ field }) => (
+                  <ModelField
+                    label="Modelo de embeddings"
+                    value={field.value}
+                    onChange={field.onChange}
+                    models={embeddingOptions}
+                    error={errors.defaultEmbeddingModel?.message}
+                    hint={embeddingHint}
+                  />
+                )}
+              />
+            ) : null}
           </div>
+          {!supportsEmbedding ? (
+            <p className="text-[13px] text-muted-foreground">
+              {ollamaCloud
+                ? "O Ollama Cloud não oferece modelos de embeddings. Para busca semântica, use um Ollama local ou outro provedor."
+                : `${meta.label} não oferece modelos de embeddings. Configure embeddings em outro provedor.`}
+            </p>
+          ) : null}
           {models.isError ? (
             <p className="text-[13px] text-muted-foreground">
-              Não foi possível listar os modelos deste provedor — digite os ids manualmente.
+              Não foi possível listar os modelos deste provedor — mostrando sugestões; você também pode digitar o id.
             </p>
           ) : null}
 

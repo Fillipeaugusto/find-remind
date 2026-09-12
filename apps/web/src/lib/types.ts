@@ -109,9 +109,11 @@ export type AiProviderInput = {
   enabled?: boolean;
 };
 
+export type ModelEntry = { id: string; label: string };
+
 export type ProviderModels = {
-  chat: { id: string; label: string }[];
-  embedding: { id: string; label: string }[];
+  chat: ModelEntry[];
+  embedding: ModelEntry[];
 };
 
 export type AvailableModel = {
