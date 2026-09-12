@@ -42,9 +42,9 @@ Regras de execução:
 ## Fase 1 — Auth
 
 ### 1.1 Better Auth — `feat(auth): add better-auth with email/password`
-- [ ] `auth/auth.ts`: `betterAuth({ database: drizzleAdapter(db, { provider: "pg", schema }), emailAndPassword: { enabled: true }, trustedOrigins: [env.WEB_URL], secret, baseURL })`. Campo extra `timezone` no user (`user.additionalFields`).
-- [ ] `plugins/auth.ts`: monta o handler do Better Auth em `/api/auth/*` (converter `FastifyRequest` → `Request` web; ver doc "Fastify integration" do Better Auth). Decora `app.auth`.
-- [ ] Verificar que as tabelas em `packages/db/src/schema/auth.ts` batem com o que o Better Auth espera (`npx @better-auth/cli generate` para comparar). Ajustar schema + migration se necessário.
+- [x] `auth/auth.ts`: `betterAuth({ database: drizzleAdapter(db, { provider: "pg", schema }), emailAndPassword: { enabled: true }, trustedOrigins: [env.WEB_URL], secret, baseURL })`. Campo extra `timezone` no user (`user.additionalFields`).
+- [x] `plugins/auth.ts`: monta o handler do Better Auth em `/api/auth/*` (converter `FastifyRequest` → `Request` web; ver doc "Fastify integration" do Better Auth). Decora `app.auth`.
+- [x] Verificar que as tabelas em `packages/db/src/schema/auth.ts` batem com o que o Better Auth espera (`npx @better-auth/cli generate` para comparar). Ajustar schema + migration se necessário.
 - Aceite: teste sign-up → sign-in → get-session via `app.inject()` com cookies.
 
 ### 1.2 Guard de sessão — `feat(auth): add session guard and request.user`
