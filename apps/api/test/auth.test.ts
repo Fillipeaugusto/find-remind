@@ -1,10 +1,9 @@
 import { session, user } from "@findremind/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { App } from "../src/app.js";
+import { defaultCredentials as credentials, sessionCookie } from "./auth.js";
 import { truncateAll } from "./db.js";
 import { createTestApp } from "./helpers.js";
-
-const credentials = { name: "Ana", email: "ana@example.com", password: "correct-horse-battery" };
 
 describe("auth routes", () => {
   let app: App;
@@ -23,12 +22,6 @@ describe("auth routes", () => {
       await app.close();
     }
   });
-
-  function sessionCookie(res: { cookies: { name: string; value: string }[] }): string {
-    const cookie = res.cookies.find((c) => c.name.endsWith("session_token"));
-    expect(cookie).toBeDefined();
-    return `${cookie!.name}=${cookie!.value}`;
-  }
 
   it("registers the auth decorator", () => {
     expect(app.hasDecorator("auth")).toBe(true);

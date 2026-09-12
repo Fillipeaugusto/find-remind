@@ -48,9 +48,9 @@ Regras de execução:
 - Aceite: teste sign-up → sign-in → get-session via `app.inject()` com cookies.
 
 ### 1.2 Guard de sessão — `feat(auth): add session guard and request.user`
-- [ ] `plugins/auth.ts`: hook `onRequest` que resolve a sessão via `auth.api.getSession({ headers })` e popula `request.user` / `request.session`. Decorator `app.requireAuth` (preHandler) que responde `401`.
-- [ ] Todas as rotas fora de `/health*` e `/api/auth/*` usam `requireAuth`.
-- [ ] `test/auth.ts`: `signUpAndLogin(app)` devolve cookie pronto para os testes seguintes.
+- [x] `plugins/auth.ts`: hook `onRequest` que resolve a sessão via `auth.api.getSession({ headers })` e popula `request.user` / `request.session`. Decorator `app.requireAuth` (preHandler) que responde `401`.
+- [x] Todas as rotas fora de `/health*` e `/api/auth/*` usam `requireAuth`.
+- [x] `test/auth.ts`: `signUpAndLogin(app)` devolve cookie pronto para os testes seguintes.
 - Aceite: rota protegida sem cookie → 401; com cookie → 200 e `request.user.id` correto.
 
 ### 1.3 Perfil — `feat(api): add /me endpoints`

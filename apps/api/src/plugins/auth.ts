@@ -5,6 +5,18 @@ import { createAuth, type Auth } from "../auth/auth.js";
 
 export const AUTH_BASE_PATH = "/api/auth";
 
+export type SessionData = Auth["$Infer"]["Session"];
+export type SessionUser = SessionData["user"];
+export type Session = SessionData["session"];
+
+// Paths that never resolve a session: Better Auth handles its own routes and
+// health probes must not touch the database.
+const PUBLIC_PREFIXES = [`${AUTH_BASE_PATH}/`, "/health", "/docs"];
+
+function isPublicPath(url: string): boolean {
+  return PUBLIC_PREFIXES.some((prefix) => url.startsWith(prefix));
+}
+
 function toWebRequest(request: FastifyRequest): Request {
   const url = new URL(request.url, `${request.protocol}://${request.host}`);
   const headers = fromNodeHeaders(request.headers);
@@ -29,6 +41,22 @@ async function sendWebResponse(reply: FastifyReply, response: Response): Promise
 const authPlugin: FastifyPluginAsync = async (app) => {
   const auth = createAuth({ db: app.db, env: app.env });
   app.decorate("auth", auth);
+  app.decorateRequest("user", null);
+  app.decorateRequest("session", null);
+
+  app.addHook("onRequest", async (request) => {
+    if (isPublicPath(request.url) || request.headers.cookie === undefined) return;
+
+    const data = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
+    if (data) {
+      request.user = data.user;
+      request.session = data.session;
+    }
+  });
+
+  app.decorate("requireAuth", async (request: FastifyRequest) => {
+    if (!request.user) throw app.httpErrors.unauthorized("Authentication required");
+  });
 
   app.route({
     method: ["GET", "POST"],
@@ -50,5 +78,10 @@ export default fp(authPlugin, {
 declare module "fastify" {
   interface FastifyInstance {
     auth: Auth;
+    requireAuth: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  }
+  interface FastifyRequest {
+    user: SessionUser | null;
+    session: Session | null;
   }
 }

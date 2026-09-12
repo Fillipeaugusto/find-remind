@@ -55,6 +55,8 @@ Registre as filas em `apps/api/src/queues/index.ts`, associando cada nome a uma 
 
 A autenticação usa Better Auth. `createAuth({ db, env })` em `apps/api/src/auth/auth.ts` monta a instância (email/senha, adapter Drizzle, campo extra `timezone` no usuário); o plugin `plugins/auth.ts` decora `app.auth` e expõe as rotas em `/api/auth/*` convertendo a request do Fastify em `Request` web. As tabelas em `packages/db/src/schema/auth.ts` devem bater com `pnpm dlx auth generate` — rode o comando ao subir a versão do Better Auth e gere migration se algo mudar.
 
+O mesmo plugin resolve a sessão em `onRequest` (quando há cookie e a rota não é `/health*`, `/api/auth/*` ou `/docs*`) e popula `request.user` e `request.session` (`null` sem sessão). Rotas protegidas usam `app.requireAuth` como `preHandler` — em módulos inteiros, `app.addHook("preHandler", app.requireAuth)` no topo do plugin de rotas. Nos testes, `signUpAndLogin(app)` de `apps/api/test/auth.ts` cria um usuário e devolve `{ cookie, user }` prontos para o header `cookie`; `createTestApp({ configure })` permite registrar rotas extras antes do `ready()`.
+
 O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md); o roadmap do backend em [`docs/tasks/backend.md`](docs/tasks/backend.md).
 
 ## Testes
