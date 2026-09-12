@@ -14,6 +14,7 @@ import {
 import type { Env } from "./config/env.js";
 import { alertsRoutes } from "./modules/alerts/alerts.routes.js";
 import { aiProvidersRoutes } from "./modules/ai-providers/ai-providers.routes.js";
+import { chatRoutes } from "./modules/chat/chat.routes.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
 import { meRoutes } from "./modules/me/me.routes.js";
 import { remindersRoutes } from "./modules/reminders/reminders.routes.js";
@@ -68,6 +69,7 @@ export async function buildApp({ env, logger = true }: BuildAppOptions): Promise
     await app.register(alertsRoutes);
     await app.register(aiProvidersRoutes);
     await app.register(searchRoutes);
+    await app.register(chatRoutes);
 
     return app;
   } catch (error) {

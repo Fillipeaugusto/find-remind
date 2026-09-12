@@ -35,8 +35,8 @@ export const availableModelsSchema = z.object({
   chat: z.array(availableModelSchema), embedding: z.array(availableModelSchema),
   defaults: z.object({ chat: z.string().nullable(), embedding: z.string().nullable() }),
 });
-const modelReference = z.string().max(240).refine((value) => parseModelReference(value) !== null, "Expected providerId:model");
-export const defaultsInputSchema = z.object({ chat: modelReference.optional(), embedding: modelReference.optional() });
+export const modelReferenceSchema = z.string().max(240).refine((value) => parseModelReference(value) !== null, "Expected providerId:model");
+export const defaultsInputSchema = z.object({ chat: modelReferenceSchema.optional(), embedding: modelReferenceSchema.optional() });
 export const noProviderErrorSchema = z.object({
   statusCode: z.literal(409), error: z.string(), message: z.string(), code: z.enum(["NO_CHAT_PROVIDER", "NO_EMBEDDING_PROVIDER"]),
 });

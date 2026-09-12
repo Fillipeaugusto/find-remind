@@ -43,6 +43,13 @@
       "when": 1789212746300,
       "tag": "0005_add_embedding_hnsw_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789214910079,
+      "tag": "0006_add_chat",
+      "breakpoints": true
     }
   ]
 }

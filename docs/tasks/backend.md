@@ -148,8 +148,8 @@ Regras de execução:
 ## Fase 6 — Chat
 
 ### 6.1 Persistência — `feat(chat): add conversations and messages tables`
-- [ ] `schema/chat.ts`: `conversation` (id, userId, title, model, createdAt, updatedAt) e `message` (id, conversationId, role, parts jsonb (UIMessage parts), createdAt).
-- [ ] Rotas `GET/POST /chat/conversations`, `GET/DELETE /chat/conversations/:id`.
+- [x] `schema/chat.ts`: `conversation` (id, userId, title, model, createdAt, updatedAt) e `message` (id, conversationId, role, parts jsonb (UIMessage parts), createdAt).
+- [x] Rotas `GET/POST /chat/conversations`, `GET/DELETE /chat/conversations/:id`.
 - Aceite: testes das rotas + isolamento.
 
 ### 6.2 Streaming — `feat(chat): stream responses with ai sdk and tools`

@@ -142,10 +142,10 @@ Os padrões de chat e embedding são atualizados juntos, preservando campos omit
 type Conversation = { id: string, title: string | null, model: string, createdAt: string, updatedAt: string }
 ```
 
-- `GET /chat/conversations?limit=&cursor=` → paginado
-- `POST /chat/conversations` `{ model?: "providerId:model" }` → `201 Conversation`
-- `GET /chat/conversations/:id` → `{ conversation, messages: UIMessage[] }` (formato `UIMessage` do AI SDK)
-- `DELETE /chat/conversations/:id` → `204`
+- `GET /chat/conversations?limit=&cursor=` → paginado, ordenado por `updatedAt desc` (a conversa com mensagem mais recente primeiro)
+- `POST /chat/conversations` `{ model?: "providerId:model" }` → `201 Conversation`. O corpo pode ser omitido. Sem `model`, usa o chat padrão do usuário; o modelo fica fixo na conversa. Referência mal formada → `400`; provedor ausente, desabilitado, não testado ou de outro usuário → `409 { code: "NO_CHAT_PROVIDER" }`.
+- `GET /chat/conversations/:id` → `{ conversation, messages: UIMessage[] }` (formato `UIMessage` do AI SDK, na ordem da conversa; `404` para id inexistente ou de outro usuário)
+- `DELETE /chat/conversations/:id` → `204` (apaga as mensagens junto)
 - `POST /chat/conversations/:id/messages` `{ messages: UIMessage[] }` → **stream** no protocolo UI Message Stream do AI SDK (compatível com `useChat` do `@ai-sdk/react`). Persiste a mensagem do usuário e a resposta completa ao terminar.
 
 Ferramentas (tools) disponíveis para o modelo no chat — o frontend renderiza os `tool-*` parts como UI:

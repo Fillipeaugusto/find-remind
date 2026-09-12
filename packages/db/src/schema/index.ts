@@ -2,4 +2,5 @@
 // drizzle-kit reads this file to generate migrations.
 export * from "./auth.js";
 export * from "./ai.js";
+export * from "./chat.js";
 export * from "./reminders.js";
