@@ -86,7 +86,7 @@ pnpm --filter @findremind/api test          # só a API
 pnpm --filter @findremind/api test:watch
 pnpm lint
 pnpm typecheck
-pnpm db:generate -- --name minha_migration  # gera migration a partir do schema Drizzle
+pnpm db:generate --name minha_migration  # gera migration a partir do schema Drizzle
 ```
 
 Estrutura:

@@ -20,7 +20,7 @@ pnpm --filter @findremind/api test               # só a api
 pnpm --filter @findremind/api test -- health     # um arquivo/filtro
 pnpm --filter @findremind/api test:watch
 pnpm lint && pnpm typecheck                      # o CI roda isso
-pnpm db:generate -- --name <nome>                # gera migration a partir do schema
+pnpm db:generate --name <nome>                # gera migration a partir do schema
 docker compose --profile ollama up -d            # LLM local opcional
 docker compose --profile app up --build          # api + web em containers
 ```
@@ -45,13 +45,15 @@ Regras:
 - Toda rota protegida recebe `request.user` via o plugin de auth; nunca confie em `userId` vindo do body.
 - Cada plugin de infra expõe um decorator (`app.db`, `app.redis`, `app.es`, `app.queues`) e fecha a conexão em `onClose`.
 - Novas variáveis de ambiente: adicionar em `config/env.ts`, `.env.example`, `docker-compose.yml` e `.github/workflows/ci.yml`.
-- Migrations: alterar o schema em `packages/db/src/schema`, rodar `pnpm db:generate -- --name <nome>`, commitar o SQL gerado. Nunca editar migration já commitada.
+- Migrations: alterar o schema em `packages/db/src/schema`, rodar `pnpm db:generate --name <nome>`, commitar o SQL gerado. Nunca editar migration já commitada.
 
 O Redis fica disponível em `app.redis`. Para cache de valores JSON, use `app.cache.cached(key, ttlSeconds, fn)` com TTL inteiro positivo em segundos; `fn` só executa quando a chave está ausente. Use datas como strings ISO. `app.cache.invalidate(pattern)` remove as chaves correspondentes com `SCAN`.
 
 O Elasticsearch fica disponível em `app.es`. `remindersIndexName(app.env.NODE_ENV)`, de `apps/api/src/search/index.ts`, retorna `development-reminders`, `test-reminders` ou `production-reminders`. No boot, `ensureIndex()` cria o índice se estiver ausente e preserva índices existentes. `title` e `content` usam o analyzer `portuguese`; os subcampos `.english` usam `english`, e `title.keyword` permite correspondência exata.
 
 Registre as filas em `apps/api/src/queues/index.ts`, associando cada nome a uma função `createProcessor(app)` que devolve o processador BullMQ. O registro começa vazio; os processadores serão adicionados nas respectivas tarefas de domínio. O plugin cria as filas em `app.queues[nome]` e usa o prefixo Redis `findremind:<NODE_ENV>`. `RUN_WORKERS` aceita `true` ou `false` e, quando omitido, habilita workers em desenvolvimento/produção e os desabilita em testes. Com `false`, as filas continuam disponíveis para envio de jobs. O encerramento espera os jobs ativos terminarem antes de fechar as filas e as conexões.
+
+A autenticação usa Better Auth. `createAuth({ db, env })` em `apps/api/src/auth/auth.ts` monta a instância (email/senha, adapter Drizzle, campo extra `timezone` no usuário); o plugin `plugins/auth.ts` decora `app.auth` e expõe as rotas em `/api/auth/*` convertendo a request do Fastify em `Request` web. As tabelas em `packages/db/src/schema/auth.ts` devem bater com `pnpm dlx auth generate` — rode o comando ao subir a versão do Better Auth e gere migration se algo mudar.
 
 O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md); o roadmap do backend em [`docs/tasks/backend.md`](docs/tasks/backend.md).
 
