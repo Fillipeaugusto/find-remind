@@ -46,7 +46,12 @@ export async function buildApp({ env, logger = true }: BuildAppOptions): Promise
   try {
     await app.register(sensible);
     await app.register(helmet, { contentSecurityPolicy: false });
-    await app.register(cors, { origin: [env.WEB_URL], credentials: true });
+    await app.register(cors, {
+      origin: [env.WEB_URL],
+      credentials: true,
+      // @fastify/cors 11 only allows GET/HEAD/POST by default; the web client also uses PUT/PATCH/DELETE.
+      methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
+    });
     await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
     await app.register(dbPlugin);
     await app.register(redisPlugin);
