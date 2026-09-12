@@ -109,9 +109,9 @@ Regras de execução:
 - Aceite: testes de roundtrip e de rejeição de payload adulterado; migration aplicada.
 
 ### 4.2 Registry de providers — `feat(ai): add provider registry with ai sdk`
-- [ ] `ai/registry.ts`: dado `ai_provider`, devolve `{ chat(modelId): LanguageModel, embedding(modelId): EmbeddingModel }` usando `createOpenAI`, `createAnthropic`, `createGoogleGenerativeAI`, `createOllama` (`ollama-ai-provider-v2`) com `baseURL`/`apiKey` do registro.
-- [ ] `ai/resolve.ts`: `resolveModel(userId, "providerId:model" | undefined, kind: "chat" | "embedding")` → usa o default do usuário quando não informado; erro tipado `NoProviderError` → `409 NO_EMBEDDING_PROVIDER` / `NO_CHAT_PROVIDER`.
-- [ ] Catálogo estático `ai/catalog.ts` com modelos curados por provider (chat + embedding) — Ollama consulta `GET {baseUrl}/api/tags` ao vivo.
+- [x] `ai/registry.ts`: dado `ai_provider`, devolve `{ chat(modelId): LanguageModel, embedding(modelId): EmbeddingModel }` usando `createOpenAI`, `createAnthropic`, `createGoogleGenerativeAI`, `createOllama` (`ollama-ai-provider-v2`) com `baseURL`/`apiKey` do registro.
+- [x] `ai/resolve.ts`: `resolveModel(userId, "providerId:model" | undefined, kind: "chat" | "embedding")` → usa o default do usuário quando não informado; erro tipado `NoProviderError` → `409 NO_EMBEDDING_PROVIDER` / `NO_CHAT_PROVIDER`.
+- [x] Catálogo estático `ai/catalog.ts` com modelos curados por provider (chat + embedding) — Ollama consulta `GET {baseUrl}/api/tags` ao vivo.
 - Aceite: testes unitários do registry (instancia o provider certo) e do resolve (default, explícito, ausente).
 
 ### 4.3 Endpoints — `feat(ai): add provider settings endpoints`

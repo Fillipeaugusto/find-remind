@@ -68,6 +68,10 @@ Os alertas são disparados pelo job `scan-due-reminders` da fila `alerts` (a cad
 
 O módulo `modules/alerts` expõe a listagem (keyset em `(firedAt, id)`, `cursor.ts`), `read`/`read-all` e o stream SSE em `GET /alerts/stream`. O handler do stream faz `reply.hijack()`, copia os headers já definidos pelos hooks (CORS, helmet) no `writeHead`, assina o usuário em `app.alertBus` e encerra no `close` da request; um hook `preClose` fecha os streams abertos antes do servidor HTTP parar (senão o `close()` nunca termina). Nos testes, use `app.inject({ payloadAsStream: true })` e leia `res.stream()`; `res.raw.res.req.destroy()` simula a desconexão do cliente. Não use `vi.waitFor` com timers falsos ativos — ele avança os timers a cada checagem.
 
+Provedores de IA ficam em `ai_provider` e os padrões por usuário em `ai_user_settings`. `createKeyCipher(env.AI_KEYS_ENCRYPTION_KEY)` (`ai/crypto.ts`) deriva uma chave com HKDF e usa AES-256-GCM com IV aleatório; preserve o segredo de criptografia para continuar lendo chaves já salvas. `createProviderRegistry(row, env)` monta os adaptadores do AI SDK 7 com as credenciais do registro, sem usar chaves globais do servidor. Anthropic não oferece embeddings. `createModelResolver(app)(userId, reference, kind)` resolve `providerId:model` ou o padrão do usuário, exigindo provedor habilitado e testado; nomes de modelos podem conter `:`. Ausência de provedor gera `NoProviderError` com status 409 e código específico de chat/embedding.
+
+`ai/catalog.ts` mantém modelos curados, inclui modelos configurados e consulta as APIs de listagem. Provedores compatíveis que não oferecem catálogo usam a lista local. No Ollama, `/api/tags` e `/api/show` identificam os modelos instalados e suas capacidades; falha de conexão é propagada. URLs do Ollama aceitam a raiz ou o sufixo `/api`; demais provedores usam a URL da API (por exemplo, `/v1` ou `/v1beta`).
+
 O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md); o roadmap do backend em [`docs/tasks/backend.md`](docs/tasks/backend.md).
 
 ## Estrutura do frontend
