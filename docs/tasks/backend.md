@@ -153,10 +153,10 @@ Regras de execução:
 - Aceite: testes das rotas + isolamento.
 
 ### 6.2 Streaming — `feat(chat): stream responses with ai sdk and tools`
-- [ ] `POST /chat/conversations/:id/messages`: `streamText({ model, system, messages: convertToModelMessages(messages), tools, stopWhen: stepCountIs(5) })` → `result.toUIMessageStreamResponse()` adaptado para Fastify (`reply.send(Readable.fromWeb(...))` + headers corretos). `onFinish` persiste a mensagem do usuário e a resposta (parts completos, incluindo tool calls/results). Título gerado na primeira resposta.
-- [ ] `chat/tools.ts`: tools do contrato (`searchReminders`, `getReminder`, `createReminder`, `updateReminder`, `completeReminder`, `resolveDateRange`, `listTags`) reutilizando os services — nunca chamam HTTP interno.
-- [ ] `chat/system-prompt.ts`: data/hora atual e fuso do usuário no prompt; instruir a usar tools para tudo que envolva dados; responder em Markdown; usar `resolveDateRange` antes de `searchReminders` quando houver expressão temporal.
-- [ ] Erros de provider (chave inválida, modelo inexistente) viram evento de erro no stream com mensagem legível, não 500.
+- [x] `POST /chat/conversations/:id/messages`: `streamText({ model, system, messages: convertToModelMessages(messages), tools, stopWhen: stepCountIs(5) })` → `result.toUIMessageStreamResponse()` adaptado para Fastify (`reply.send(Readable.fromWeb(...))` + headers corretos). `onFinish` persiste a mensagem do usuário e a resposta (parts completos, incluindo tool calls/results). Título gerado na primeira resposta.
+- [x] `chat/tools.ts`: tools do contrato (`searchReminders`, `getReminder`, `createReminder`, `updateReminder`, `completeReminder`, `resolveDateRange`, `listTags`) reutilizando os services — nunca chamam HTTP interno.
+- [x] `chat/system-prompt.ts`: data/hora atual e fuso do usuário no prompt; instruir a usar tools para tudo que envolva dados; responder em Markdown; usar `resolveDateRange` antes de `searchReminders` quando houver expressão temporal.
+- [x] Erros de provider (chave inválida, modelo inexistente) viram evento de erro no stream com mensagem legível, não 500.
 - Aceite: teste com `MockLanguageModel` (streaming) verificando o protocolo de stream e a persistência; teste de cada tool chamando o service.
 
 ---

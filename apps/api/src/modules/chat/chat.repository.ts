@@ -1,4 +1,4 @@
-import { and, asc, conversation, desc, eq, lt, max, message, or, type Database, type SQL } from "@findremind/db";
+import { and, asc, conversation, desc, eq, inArray, lt, max, message, or, type Database, type SQL } from "@findremind/db";
 
 export type ConversationRow = typeof conversation.$inferSelect;
 export type MessageRow = typeof message.$inferSelect;
@@ -76,16 +76,24 @@ export function createChatRepository(db: Database) {
           .select({ position: max(message.position) })
           .from(message)
           .where(eq(message.conversationId, conversationId));
+        const stored = await tx
+          .select({ id: message.id })
+          .from(message)
+          .where(and(eq(message.conversationId, conversationId), inArray(message.id, messages.map((entry) => entry.id))));
+        const existing = new Set(stored.map((row) => row.id));
         let position = (current?.position ?? -1) + 1;
         const now = new Date();
         for (const entry of messages) {
-          await tx
-            .insert(message)
-            .values({ conversationId, id: entry.id, role: entry.role, parts: entry.parts, position: position++, createdAt: now })
-            .onConflictDoUpdate({
-              target: [message.conversationId, message.id],
-              set: { role: entry.role, parts: entry.parts },
-            });
+          if (existing.has(entry.id)) {
+            await tx
+              .update(message)
+              .set({ role: entry.role, parts: entry.parts })
+              .where(and(eq(message.conversationId, conversationId), eq(message.id, entry.id)));
+          } else {
+            await tx
+              .insert(message)
+              .values({ conversationId, id: entry.id, role: entry.role, parts: entry.parts, position: position++, createdAt: now });
+          }
         }
         await tx
           .update(conversation)

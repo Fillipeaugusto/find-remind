@@ -45,3 +45,20 @@ export type ListConversationsQuery = z.infer<typeof listConversationsQuerySchema
 export type ConversationPage = z.infer<typeof conversationPageSchema>;
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 export type StoredUIMessage = z.infer<typeof uiMessageSchema>;
+
+// Only the last message of the request is used: it must be a fresh user text
+// message. Earlier turns are loaded from the database, never trusted from the
+// client.
+export const userTextMessageSchema = z.object({
+  id: z.string().trim().min(1).max(64),
+  role: z.literal("user"),
+  parts: z.array(z.object({ type: z.literal("text"), text: z.string().max(20_000) })).min(1).max(20),
+  metadata: z.unknown().optional(),
+});
+
+export const sendMessagesSchema = z.object({
+  messages: z.array(z.looseObject({})).min(1).max(1_000),
+});
+
+export type UserTextMessage = z.infer<typeof userTextMessageSchema>;
+export type SendMessagesInput = z.infer<typeof sendMessagesSchema>;
