@@ -142,4 +142,4 @@ Ferramentas (tools) disponíveis para o modelo no chat — o frontend renderiza 
 ## Health
 
 - `GET /health` → `{ status: "ok", uptime, timestamp }`
-- `GET /health/ready` → `{ status: "ok" | "degraded", checks: { postgres, redis, elasticsearch } }`
+- `GET /health/ready` → `{ status: "ok" | "degraded", checks: { postgres, redis, elasticsearch } }` — cada check é `"ok" | "error"`; responde `503` quando `status = degraded`

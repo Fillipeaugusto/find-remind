@@ -34,7 +34,7 @@ Regras de execução:
 - Aceite: teste enfileira job e processa com worker inline.
 
 ### 0.5 Readiness — `feat(api): add readiness endpoint`
-- [ ] `GET /health/ready` checando postgres (`select 1`), redis (`ping`), ES (`cluster.health`). `503` se algum falhar.
+- [x] `GET /health/ready` checando postgres (`select 1`), redis (`ping`), ES (`cluster.health`). `503` se algum falhar.
 - Aceite: teste com serviços reais (200) e com mock quebrado (503).
 
 ---
