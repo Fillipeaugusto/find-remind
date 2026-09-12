@@ -73,10 +73,12 @@ type Alert = {
   id: string
   reminderId: string
   reminder: Pick<Reminder, "id" | "title" | "remindAt">
-  firedAt: string
+  firedAt: string                 // instante da ocorrência (o nextFireAt que disparou)
   readAt: string | null
 }
 ```
+
+O scheduler roda a cada 30s: ao disparar, um lembrete recorrente avança `nextFireAt` para a próxima ocorrência; os demais ficam `status = scheduled` com `nextFireAt = null` até o usuário concluir, adiar ou dispensar. Um lembrete atrasado gera um único alerta por varredura (ocorrências perdidas não acumulam). Há no máximo um alerta por `(reminderId, firedAt)`.
 
 - `GET /alerts?unread=true&limit=&cursor=` → paginado
 - `POST /alerts/:id/read` → `Alert`

@@ -71,6 +71,17 @@ const queuePlugin: FastifyPluginAsync<QueuePluginOptions> = async (app, options)
         app.log.error({ err, queue: name, jobId: job?.id }, "Queue job failed");
       });
       await worker.waitUntilReady();
+
+      // Upserting is idempotent, so every instance may register the same
+      // scheduler; only processes running workers do, to keep repeatable
+      // jobs from piling up where nothing consumes them.
+      for (const scheduler of definition.schedulers ?? []) {
+        await queue.upsertJobScheduler(
+          scheduler.id,
+          { every: scheduler.every },
+          { name: scheduler.name, data: scheduler.data ?? {}, opts: { removeOnComplete: true, removeOnFail: 100 } },
+        );
+      }
     }
   }
 

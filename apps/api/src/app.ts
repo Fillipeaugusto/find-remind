@@ -15,6 +15,7 @@ import type { Env } from "./config/env.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
 import { meRoutes } from "./modules/me/me.routes.js";
 import { remindersRoutes } from "./modules/reminders/reminders.routes.js";
+import alertBusPlugin from "./plugins/alert-bus.js";
 import authPlugin from "./plugins/auth.js";
 import dbPlugin from "./plugins/db.js";
 import elasticsearchPlugin from "./plugins/elasticsearch.js";
@@ -47,6 +48,7 @@ export async function buildApp({ env, logger = true }: BuildAppOptions): Promise
     await app.register(redisPlugin);
     await app.register(elasticsearchPlugin);
     await app.register(queuePlugin);
+    await app.register(alertBusPlugin);
     await app.register(authPlugin);
 
     await app.register(swagger, {

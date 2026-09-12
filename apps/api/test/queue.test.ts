@@ -149,6 +149,25 @@ describe("BullMQ queue plugin", () => {
     await vi.waitFor(() => expect(connection.status).toBe("end"));
   });
 
+  it("registers job schedulers only when workers run", async () => {
+    const definitions: QueueDefinitions = {
+      [name]: {
+        createProcessor: () => async () => "tick",
+        schedulers: [{ id: "tick", name: "tick", every: 60_000, data: { source: "test" } }],
+      },
+    };
+
+    const idle = await createQueueApp(false, definitions);
+    expect(await idle.queues[name]!.getJobSchedulers()).toEqual([]);
+
+    const running = await createQueueApp(true, definitions);
+    const schedulers = await running.queues[name]!.getJobSchedulers();
+
+    expect(schedulers).toMatchObject([{ key: "tick", name: "tick", every: 60_000, template: { data: { source: "test" } } }]);
+    // The scheduler keeps the next run waiting in the delayed set.
+    expect(await running.queues[name]!.getDelayedCount()).toBe(1);
+  });
+
   it("uses different key prefixes for each environment", () => {
     expect(new Set([queuePrefix("test"), queuePrefix("development"), queuePrefix("production")]).size).toBe(3);
   });

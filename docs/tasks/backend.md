@@ -90,8 +90,8 @@ Regras de execução:
 ## Fase 3 — Alertas
 
 ### 3.1 Scheduler — `feat(alerts): schedule and fire reminder alerts`
-- [ ] Job repetível `scan-due-reminders` a cada 30s: busca `nextFireAt <= now() AND status in (scheduled, snoozed)` (lock por `FOR UPDATE SKIP LOCKED`), cria `alert`, publica no Redis pub/sub `alerts:{userId}`, e avança `nextFireAt` (recorrente) ou marca `status=scheduled` com `nextFireAt=null` aguardando ação do usuário.
-- [ ] Idempotência: não criar dois alerts para a mesma ocorrência (unique `(reminderId, firedAt)` ou coluna `lastFiredAt`).
+- [x] Job repetível `scan-due-reminders` a cada 30s: busca `nextFireAt <= now() AND status in (scheduled, snoozed)` (lock por `FOR UPDATE SKIP LOCKED`), cria `alert`, publica no Redis pub/sub `alerts:{userId}`, e avança `nextFireAt` (recorrente) ou marca `status=scheduled` com `nextFireAt=null` aguardando ação do usuário.
+- [x] Idempotência: não criar dois alerts para a mesma ocorrência (unique `(reminderId, firedAt)` ou coluna `lastFiredAt`).
 - Aceite: teste com relógio fake (`vi.useFakeTimers`) + execução direta do handler do job.
 
 ### 3.2 API de alertas + SSE — `feat(alerts): add alerts endpoints and sse stream`
