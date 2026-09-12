@@ -19,6 +19,7 @@ pnpm test                                        # todos os testes
 pnpm --filter @findremind/api test               # só a api
 pnpm --filter @findremind/api test -- health     # um arquivo/filtro
 pnpm --filter @findremind/api test:watch
+pnpm --filter @findremind/web test               # só o front (Vitest + jsdom)
 pnpm lint && pnpm typecheck                      # o CI roda isso
 pnpm db:generate --name <nome>                   # gera migration a partir do schema
 docker compose --profile ollama up -d            # LLM local opcional
@@ -59,9 +60,33 @@ O mesmo plugin resolve a sessão em `onRequest` (quando há cookie e a rota não
 
 O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md); o roadmap do backend em [`docs/tasks/backend.md`](docs/tasks/backend.md).
 
+## Estrutura do frontend
+
+```
+apps/web/src
+├── app/                # App Router: (auth)/login|register, (app)/reminders|search|chat|alerts|settings
+├── proxy.ts            # redireciona por cookie de sessão (sem sessão → /login; com sessão → /reminders)
+├── components/
+│   ├── ui/             # shadcn (Base UI) — gerado pelo CLI, não editar à mão
+│   ├── form/           # Input, Textarea, Select e TagsInput com label flutuante
+│   ├── layout/         # sidebar, navegação, cabeçalho de página
+│   └── <domínio>/      # reminders, search, chat, alerts, ai, settings, auth
+├── hooks/              # TanStack Query por recurso (use-reminders, use-alerts, use-ai, ...)
+└── lib/                # api.ts (fetch + ApiError), auth-client.ts (Better Auth), types.ts (contrato), format.ts
+```
+
+Regras:
+
+- Todo acesso à API passa por `lib/api.ts` (`credentials: include`, erros viram `ApiError` com `status`/`code`; `401` redireciona para o login). Os tipos em `lib/types.ts` espelham `docs/api-contract.md` — ao mudar o contrato, atualize os dois.
+- Dados vêm de hooks em `hooks/` (TanStack Query). Mutations invalidam as chaves de `lib/query-keys.ts`; componentes não chamam `fetch` direto.
+- Formulários usam `react-hook-form` + Zod com os primitivos de `components/form` (label flutuante; erro = borda e texto vermelhos). Selects controlados via `Controller`.
+- Chat usa `useChat` do AI SDK com `DefaultChatTransport` apontando para a API; cada tool do contrato tem um renderer em `components/chat/tool-parts.tsx`.
+- Datas na UI são formatadas em `lib/format.ts` (pt-BR); a API sempre recebe/entrega ISO UTC.
+- Componentes novos do shadcn: `pnpm dlx shadcn@latest add <nome>` dentro de `apps/web`.
+
 ## Testes
 
-- Vitest. Unit tests ficam ao lado do código (`*.test.ts`); integração em `apps/api/test/`.
+- Vitest. Unit tests ficam ao lado do código (`*.test.ts`); integração em `apps/api/test/`. No front, `*.test.tsx` ao lado do componente com Testing Library (jsdom).
 - `apps/api/test/helpers.ts` → `createTestApp()` monta o app real com `logger: false`; use `app.inject()` para testar rotas.
 - Testes de integração usam Postgres/Redis/ES reais (docker compose local, services no CI). Banco de teste: `findremind_test`. Limpe as tabelas entre testes (truncate), não recrie o schema.
 - Providers de IA nos testes: sempre mockados (`ai/test`). Nunca chame API externa em teste.
