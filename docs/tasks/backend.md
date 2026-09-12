@@ -24,8 +24,8 @@ Regras de execução:
 - Aceite: teste de `cached` (hit/miss/ttl) contra Redis real.
 
 ### 0.3 Plugin Elasticsearch — `feat(search): add elasticsearch plugin and index bootstrap`
-- [ ] `plugins/elasticsearch.ts` com `@elastic/elasticsearch`; decora `app.es`.
-- [ ] `search/index.ts`: nome do índice `reminders` (prefixo por `NODE_ENV`, ex. `test-reminders`), mapping (`title` text + `keyword`, `content` text, `tags` keyword, `remindAt`/`createdAt` date, `status` keyword, `userId` keyword) com analyzer `portuguese` + `english` (multi-field). `ensureIndex()` idempotente no boot.
+- [x] `plugins/elasticsearch.ts` com `@elastic/elasticsearch`; decora `app.es`.
+- [x] `search/index.ts`: nome do índice `reminders` (prefixo por `NODE_ENV`, ex. `test-reminders`), mapping (`title` text + `keyword`, `content` text, `tags` keyword, `remindAt`/`createdAt` date, `status` keyword, `userId` keyword) com analyzer `portuguese` + `english` (multi-field). `ensureIndex()` idempotente no boot.
 - Aceite: teste que `ensureIndex()` cria e não recria; mapping validado.
 
 ### 0.4 Filas (BullMQ) — `feat(api): add bullmq queue plugin`

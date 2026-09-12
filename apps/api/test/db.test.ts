@@ -1,7 +1,9 @@
 import { account, session, sql, user, verification } from "@findremind/db";
+import Fastify from "fastify";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp, type App } from "../src/app.js";
 import { loadEnv } from "../src/config/env.js";
+import dbPlugin from "../src/plugins/db.js";
 import { migrateTestDb, truncateAll } from "./db.js";
 import { createTestApp } from "./helpers.js";
 
@@ -83,11 +85,12 @@ describe("database plugin", () => {
   });
 
   it.each(["development", "production"] as const)("does not connect or migrate on boot in %s", async (mode) => {
-    const otherApp = await buildApp({
-      env: { ...loadEnv(), NODE_ENV: mode, DATABASE_URL: "postgres://localhost:1/unavailable" },
-      logger: false,
+    const otherApp = Fastify({ logger: false });
+    otherApp.decorate("env", {
+      ...loadEnv(), NODE_ENV: mode, DATABASE_URL: "postgres://localhost:1/unavailable",
     });
     try {
+      await otherApp.register(dbPlugin);
       await otherApp.ready();
       expect(otherApp.hasDecorator("db")).toBe(true);
     } finally {

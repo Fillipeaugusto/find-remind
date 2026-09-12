@@ -49,6 +49,8 @@ Regras:
 
 O Redis fica disponível em `app.redis`. Para cache de valores JSON, use `app.cache.cached(key, ttlSeconds, fn)` com TTL inteiro positivo em segundos; `fn` só executa quando a chave está ausente. Use datas como strings ISO. `app.cache.invalidate(pattern)` remove as chaves correspondentes com `SCAN`.
 
+O Elasticsearch fica disponível em `app.es`. `remindersIndexName(app.env.NODE_ENV)`, de `apps/api/src/search/index.ts`, retorna `development-reminders`, `test-reminders` ou `production-reminders`. No boot, `ensureIndex()` cria o índice se estiver ausente e preserva índices existentes. `title` e `content` usam o analyzer `portuguese`; os subcampos `.english` usam `english`, e `title.keyword` permite correspondência exata.
+
 O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md); o roadmap do backend em [`docs/tasks/backend.md`](docs/tasks/backend.md).
 
 ## Testes
@@ -67,7 +69,7 @@ docker compose exec -T postgres createdb -U findremind findremind_test
 
 `createTestApp()` aplica as migrations antes de disponibilizar o app. Os helpers de banco exigem `NODE_ENV=test` e o banco `findremind_test`. Use `truncateAll(app.db)` de `apps/api/test/db.ts` entre testes; ele preserva o histórico de migrations. Os arquivos de teste executam em sequência para evitar disputas por esse banco compartilhado.
 
-Os testes do app também exigem Redis ativo (`pnpm docker:up`). Os testes de cache usam prefixos exclusivos e removem apenas suas próprias chaves ao terminar.
+Os testes do app também exigem Redis e Elasticsearch ativos (`pnpm docker:up`). Os testes de cache usam prefixos exclusivos e removem apenas suas próprias chaves ao terminar. Os testes de criação de índices usam nomes exclusivos com prefixo `test-reminders-` e removem esses índices ao terminar.
 
 ## Commits
 

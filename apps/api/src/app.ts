@@ -14,6 +14,7 @@ import {
 import type { Env } from "./config/env.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
 import dbPlugin from "./plugins/db.js";
+import elasticsearchPlugin from "./plugins/elasticsearch.js";
 import redisPlugin from "./plugins/redis.js";
 
 export type App = FastifyInstance;
@@ -33,24 +34,30 @@ export async function buildApp({ env, logger = true }: BuildAppOptions): Promise
 
   app.decorate("env", env);
 
-  await app.register(sensible);
-  await app.register(helmet, { contentSecurityPolicy: false });
-  await app.register(cors, { origin: [env.WEB_URL], credentials: true });
-  await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
-  await app.register(dbPlugin);
-  await app.register(redisPlugin);
+  try {
+    await app.register(sensible);
+    await app.register(helmet, { contentSecurityPolicy: false });
+    await app.register(cors, { origin: [env.WEB_URL], credentials: true });
+    await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
+    await app.register(dbPlugin);
+    await app.register(redisPlugin);
+    await app.register(elasticsearchPlugin);
 
-  await app.register(swagger, {
-    openapi: {
-      info: { title: "FindRemind API", version: "0.0.0" },
-    },
-    transform: jsonSchemaTransform,
-  });
-  await app.register(swaggerUi, { routePrefix: "/docs" });
+    await app.register(swagger, {
+      openapi: {
+        info: { title: "FindRemind API", version: "0.0.0" },
+      },
+      transform: jsonSchemaTransform,
+    });
+    await app.register(swaggerUi, { routePrefix: "/docs" });
 
-  await app.register(healthRoutes);
+    await app.register(healthRoutes);
 
-  return app;
+    return app;
+  } catch (error) {
+    await app.close();
+    throw error;
+  }
 }
 
 declare module "fastify" {
