@@ -118,6 +118,8 @@ type AiProvider = {
   ```
 - `PUT /ai/defaults` `{ chat?: "providerId:model", embedding?: "providerId:model" }` → `204`
 
+Alterar o padrão de embedding agenda a reconstrução dos vetores dos lembretes do usuário em segundo plano. Criações e edições também geram embeddings pela fila; modelos diferentes são mantidos separados pela referência completa do provedor e do modelo.
+
 Todas as operações ficam restritas ao usuário autenticado; ids de outros usuários nas rotas `/ai/providers/:id*` retornam `404`. `baseUrl` exige HTTP(S), sem credenciais, query ou fragmento. URL, chave ou modelo inválido → `400`; Anthropic não aceita modelo de embedding. `apiKey` deve ser não vazia quando enviada; omiti-la no PATCH preserva a chave salva.
 
 Alterar tipo, URL, chave ou modelos zera `lastCheck*` e remove os padrões associados. Desabilitar o provedor ou falhar no teste também remove esses padrões. Alterar apenas o rótulo preserva a validação. Conflitos entre alterações simultâneas retornam `409`.

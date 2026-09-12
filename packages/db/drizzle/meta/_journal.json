@@ -29,6 +29,20 @@
       "when": 1789189237107,
       "tag": "0003_add_ai_providers",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789212651283,
+      "tag": "0004_add_reminder_embeddings",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789212746300,
+      "tag": "0005_add_embedding_hnsw_indexes",
+      "breakpoints": true
     }
   ]
 }

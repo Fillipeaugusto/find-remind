@@ -5,6 +5,7 @@ import { createKeyCipher } from "../../ai/crypto.js";
 import { NoProviderError, ProviderConfigurationError } from "../../ai/errors.js";
 import { createProviderRegistry, type ProviderRow } from "../../ai/registry.js";
 import { parseModelReference } from "../../ai/resolve.js";
+import { createSearchSync } from "../../search/sync.js";
 import { createAiProvidersRepository } from "./ai-providers.repository.js";
 import type { AiProvider, AvailableModels, CreateProviderInput, DefaultsInput, UpdateProviderInput } from "./ai-providers.schemas.js";
 
@@ -139,7 +140,9 @@ export function createAiProvidersService(app: App) {
         if (!models[kind].some((model) => model.id === parsed!.model)) throw app.httpErrors.badRequest(`Unknown ${kind} model`);
         expected.push(row);
       }
-      if (!await repository.setDefaults(userId, input, expected)) throw app.httpErrors.conflict("Provider settings changed; try again");
+      const result = await repository.setDefaults(userId, input, expected);
+      if (!result) throw app.httpErrors.conflict("Provider settings changed; try again");
+      if (result.embeddingChanged) await createSearchSync(app).embeddingDefaultChanged(userId);
     },
   };
 }

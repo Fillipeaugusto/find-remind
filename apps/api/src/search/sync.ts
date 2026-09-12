@@ -1,6 +1,7 @@
 import type { App } from "../app.js";
 
 export const SEARCH_QUEUE = "search";
+export const searchJobOptions = { removeOnComplete: true, removeOnFail: 1_000, attempts: 3, backoff: { type: "exponential", delay: 1_000 } };
 
 export function searchCacheKey(userId: string, suffix: string): string {
   return `search:${userId}:${suffix}`;
@@ -14,16 +15,16 @@ export function createSearchSync(app: App) {
     async reminderChanged(reminderId: string, userId: string): Promise<void> {
       try {
         await Promise.all([
-          app.queues[SEARCH_QUEUE]!.add(
-            "index-reminder",
-            { reminderId },
-            { removeOnComplete: true, removeOnFail: 1_000, attempts: 3, backoff: { type: "exponential", delay: 1_000 } },
-          ),
+          app.queues[SEARCH_QUEUE]!.addBulk(["index-reminder", "embed-reminder"].map((name) => ({ name, data: { reminderId }, opts: searchJobOptions }))),
           app.cache.invalidate(searchCacheKey(userId, "*")),
         ]);
       } catch (err) {
         app.log.error({ err, reminderId }, "Failed to schedule reminder indexing");
       }
+    },
+    async embeddingDefaultChanged(userId: string): Promise<void> {
+      await app.cache.invalidate(searchCacheKey(userId, "*"));
+      await app.queues[SEARCH_QUEUE]!.add("reembed-user", { userId }, searchJobOptions);
     },
   };
 }

@@ -9,6 +9,7 @@ import type { AiProvider, CreateProviderInput } from "../src/modules/ai-provider
 import { signUpAndLogin } from "./auth.js";
 import { truncateAll } from "./db.js";
 import { createTestApp } from "./helpers.js";
+import { clearQueues } from "./queues.js";
 
 function textResult() {
   return {
@@ -29,6 +30,7 @@ describe("AI provider routes", () => {
 
   beforeAll(async () => { app = await createTestApp(); });
   beforeEach(async () => {
+    await clearQueues(app);
     await truncateAll(app.db);
     const session = await signUpAndLogin(app);
     cookie = session.cookie;
@@ -40,7 +42,7 @@ describe("AI provider routes", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Unexpected external request")));
   });
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
-  afterAll(async () => { if (app) { await truncateAll(app.db); await app.close(); } });
+  afterAll(async () => { if (app) { await clearQueues(app); await truncateAll(app.db); await app.close(); } });
 
   async function create(patch: Partial<CreateProviderInput> = {}, sessionCookie = cookie) {
     const res = await app.inject({ method: "POST", url: "/ai/providers", headers: { cookie: sessionCookie }, payload: {

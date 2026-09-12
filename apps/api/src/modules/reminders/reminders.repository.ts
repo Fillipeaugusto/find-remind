@@ -13,6 +13,7 @@ import {
   lte,
   or,
   reminder,
+  reminderEmbedding,
   reminderTag,
   sql,
   type Database,
@@ -131,6 +132,7 @@ export function createRemindersRepository(db: Database) {
       return db.transaction(async (tx) => {
         const [row] = await tx.update(reminder).set(patch).where(scope(userId, id)).returning();
         if (!row) return undefined;
+        await tx.delete(reminderEmbedding).where(eq(reminderEmbedding.reminderId, id));
 
         if (tags) {
           await tx.delete(reminderTag).where(eq(reminderTag.reminderId, id));

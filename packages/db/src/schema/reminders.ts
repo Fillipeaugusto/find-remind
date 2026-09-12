@@ -1,5 +1,8 @@
 import {
+  check,
+  customType,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -9,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { user } from "./auth.js";
 
 export const reminderKind = pgEnum("reminder_kind", ["reminder", "note"]);
@@ -66,6 +70,22 @@ export const reminderTag = pgTable(
   },
   (table) => [primaryKey({ columns: [table.reminderId, table.tag] })],
 );
+
+// Drizzle's built-in vector builder requires a fixed dimension.
+const variableVector = customType<{ data: number[]; driverData: string }>({
+  dataType: () => "vector",
+  toDriver: (value) => JSON.stringify(value),
+  fromDriver: (value) => JSON.parse(value) as number[],
+});
+
+export const reminderEmbedding = pgTable("reminder_embedding", {
+  reminderId: uuid("reminder_id").primaryKey().references(() => reminder.id, { onDelete: "cascade" }),
+  model: text("model").notNull(),
+  dims: integer("dims").notNull(),
+  embedding: variableVector("embedding").notNull(),
+}, (table) => [
+  check("reminder_embedding_dims_check", sql`${table.dims} between 1 and 16000 and vector_dims(${table.embedding}) = ${table.dims}`),
+]);
 
 export const alert = pgTable(
   "alert",

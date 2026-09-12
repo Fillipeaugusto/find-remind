@@ -61,8 +61,9 @@ export function createAiProvidersRepository(db: Database) {
           ...(input.chat !== undefined ? { defaultChat: input.chat } : {}),
           ...(input.embedding !== undefined ? { defaultEmbedding: input.embedding } : {}),
         };
+        const [previous] = await tx.select().from(aiUserSettings).where(eq(aiUserSettings.userId, userId));
         await tx.insert(aiUserSettings).values({ userId, ...patch }).onConflictDoUpdate({ target: aiUserSettings.userId, set: patch });
-        return true;
+        return { embeddingChanged: input.embedding !== undefined && previous?.defaultEmbedding !== input.embedding };
       });
     },
   };

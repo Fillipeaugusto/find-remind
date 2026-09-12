@@ -200,7 +200,9 @@ describe("alert scheduler", () => {
       expect(received.map((r) => r.channel)).toContain(alertChannel(other.user.id));
 
       const jobs = await app.queues[SEARCH_QUEUE]!.getJobs(["waiting", "delayed"]);
-      expect(jobs.map((job) => job.data.reminderId).sort()).toEqual([mine.id, theirs.id].sort());
+      for (const name of ["index-reminder", "embed-reminder"]) {
+        expect(jobs.filter((job) => job.name === name).map((job) => job.data.reminderId).sort()).toEqual([mine.id, theirs.id].sort());
+      }
     });
   });
 

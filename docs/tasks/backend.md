@@ -125,9 +125,9 @@ Regras de execução:
 ## Fase 5 — Busca semântica
 
 ### 5.1 Embeddings — `feat(search): generate and store reminder embeddings`
-- [ ] `schema/reminders.ts`: `reminder_embedding` (reminderId pk, model text, dims int, embedding `vector(1536)`? → **usar `vector` sem dimensão fixa + coluna `dims`**, índice HNSW criado por migration separada por dimensão comum (1536, 768, 1024) usando índices parciais `WHERE dims = N`).
-- [ ] Job `embed-reminder` enfileirado junto com `index-reminder`: texto = `title + "\n" + content + tags`; usa `resolveModel(userId, undefined, "embedding")`; se não houver provider, marca job como `skipped` (sem erro).
-- [ ] Reembed quando `model` default muda (job `reembed-user`).
+- [x] `schema/reminders.ts`: `reminder_embedding` (reminderId pk, model text, dims int, embedding `vector(1536)`? → **usar `vector` sem dimensão fixa + coluna `dims`**, índice HNSW criado por migration separada por dimensão comum (1536, 768, 1024) usando índices parciais `WHERE dims = N`).
+- [x] Job `embed-reminder` enfileirado junto com `index-reminder`: texto = `title + "\n" + content + tags`; usa `resolveModel(userId, undefined, "embedding")`; se não houver provider, marca job como `skipped` (sem erro).
+- [x] Reembed quando `model` default muda (job `reembed-user`).
 - Aceite: teste com embedding model mockado retornando vetor fixo; vetor persistido; sem provider → skip.
 
 ### 5.2 Busca híbrida — `feat(search): add keyword, semantic and hybrid search`
