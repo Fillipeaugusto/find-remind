@@ -12,8 +12,24 @@ import { takePendingMessage } from "@/lib/pending-message";
 import type { Conversation } from "@/lib/types";
 import { Composer } from "./composer";
 import { ChatMessage } from "./message";
+import { userMessageText } from "./message-parts";
 import { ModelLabel } from "./model-picker";
 
+const NEAR_BOTTOM_PX = 80;
+
+function scrollToBottom(behavior: ScrollBehavior) {
+  window.scrollTo({ top: document.documentElement.scrollHeight, behavior });
+}
+
+function isNearBottom() {
+  return document.documentElement.scrollHeight - window.innerHeight - window.scrollY < NEAR_BOTTOM_PX;
+}
+
+/**
+ * A conversa rola com a página; o composer é sticky no rodapé, então nunca
+ * sai da tela. Enquanto o usuário está no fim, novas mensagens mantêm o
+ * scroll colado embaixo; se ele subiu, um botão leva de volta ao fim.
+ */
 export function ChatSession({
   conversation,
   initialMessages,
@@ -22,8 +38,7 @@ export function ChatSession({
   initialMessages: UIMessage[];
 }) {
   const queryClient = useQueryClient();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const stickToBottom = useRef(true);
   const [atBottom, setAtBottom] = useState(true);
 
@@ -43,6 +58,11 @@ export function ChatSession({
 
   const busy = status === "submitted" || status === "streaming";
 
+  const send = (text: string) => {
+    stickToBottom.current = true;
+    return sendMessage({ text });
+  };
+
   // Mensagem digitada na tela "nova conversa" antes da conversa existir.
   useEffect(() => {
     const pending = takePendingMessage(conversation.id);
@@ -51,78 +71,88 @@ export function ChatSession({
   }, [conversation.id]);
 
   useEffect(() => {
-    if (stickToBottom.current) bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages]);
+    const onScroll = () => {
+      const near = isNearBottom();
+      stickToBottom.current = near;
+      setAtBottom(near);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
-  const onScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    stickToBottom.current = near;
-    setAtBottom(near);
-  };
+  useEffect(() => {
+    if (stickToBottom.current) scrollToBottom("instant");
+  }, [messages]);
 
   const lastMessage = messages[messages.length - 1];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-center px-4 lg:justify-start lg:px-5">
+    <div className="flex flex-1 flex-col">
+      <header className="sticky top-14 z-20 flex h-12 shrink-0 items-center justify-center bg-background/85 px-4 backdrop-blur lg:top-0 lg:h-14 lg:justify-start lg:px-5">
         <h1 className="truncate text-sm font-medium">{conversation.title ?? "Nova conversa"}</h1>
       </header>
 
-      <div ref={scrollRef} onScroll={onScroll} className="relative min-h-0 flex-1 overflow-y-auto scrollbar-thin">
-        <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6">
-          {messages.map((message) => (
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-4 pb-6 sm:px-6">
+        {messages.map((message, index) => {
+          const next = messages[index + 1];
+          return (
             <ChatMessage
               key={message.id}
               message={message}
               streaming={busy && message.id === lastMessage?.id && message.role === "assistant"}
+              quickReply={
+                message.role === "assistant"
+                  ? {
+                      active: !busy && index === messages.length - 1,
+                      answered: next?.role === "user" ? userMessageText(next) : undefined,
+                      onAnswer: (text) => void send(text),
+                      focusComposer: () => composerRef.current?.focus(),
+                    }
+                  : undefined
+              }
             />
-          ))}
-          {status === "submitted" && lastMessage?.role === "user" ? (
-            <ChatMessage message={{ id: "pending", role: "assistant", parts: [] }} streaming />
-          ) : null}
-          {error ? (
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm">
-              <p className="flex-1 text-destructive">{error.message || "A resposta falhou."}</p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  clearError();
-                  void regenerate();
-                }}
-              >
-                <RefreshCwIcon /> Tentar de novo
-              </Button>
-            </div>
-          ) : null}
-          <div ref={bottomRef} />
-        </div>
+          );
+        })}
+        {status === "submitted" && lastMessage?.role === "user" ? (
+          <ChatMessage message={{ id: "pending", role: "assistant", parts: [] }} streaming />
+        ) : null}
+        {error ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm">
+            <p className="flex-1 text-destructive">{error.message || "A resposta falhou."}</p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                clearError();
+                void regenerate();
+              }}
+            >
+              <RefreshCwIcon /> Tentar de novo
+            </Button>
+          </div>
+        ) : null}
       </div>
 
-      <div className="shrink-0 px-4 pb-4 sm:px-6">
+      <div className="sticky bottom-0 z-20 bg-linear-to-t from-background via-background to-transparent px-4 pt-4 pb-4 sm:px-6">
         <div className="relative mx-auto max-w-3xl">
           {!atBottom ? (
             <Button
               variant="outline"
               size="icon-sm"
               aria-label="Ir para o fim"
-              className="absolute -top-12 left-1/2 -translate-x-1/2 rounded-full shadow-sm"
+              className="absolute -top-12 left-1/2 -translate-x-1/2 rounded-full bg-background shadow-sm"
               onClick={() => {
                 stickToBottom.current = true;
                 setAtBottom(true);
-                bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+                scrollToBottom("smooth");
               }}
             >
               <ArrowDownIcon />
             </Button>
           ) : null}
           <Composer
-            onSend={(text) => {
-              stickToBottom.current = true;
-              return sendMessage({ text });
-            }}
+            inputRef={composerRef}
+            onSend={send}
             onStop={stop}
             busy={busy}
             leading={<ModelLabel model={conversation.model} />}

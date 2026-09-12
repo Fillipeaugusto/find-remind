@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { reminder, eq } from "@findremind/db";
 import type { Tool } from "ai";
+import type { z } from "zod";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { App } from "../src/app.js";
 import { createChatTools } from "../src/chat/tools.js";
@@ -45,6 +46,9 @@ describe("chat tools", () => {
   async function run<T = unknown>(name: string, input: unknown): Promise<T> {
     return (await tools[name]!.execute!(input, options)) as T;
   }
+  function schema(name: string): z.ZodType {
+    return tools[name]!.inputSchema as z.ZodType;
+  }
   async function create(patch: Partial<typeof reminder.$inferInsert> = {}, tags = ["casa"], userId = session.user.id) {
     const row = await createRemindersRepository(app.db).create(
       { userId, title: "Pagar aluguel", content: "Apartamento", kind: "reminder", remindAt: new Date("2026-09-09T12:00:00Z"), ...patch },
@@ -56,7 +60,7 @@ describe("chat tools", () => {
 
   it("exposes every tool of the contract", () => {
     expect(Object.keys(tools).sort()).toEqual([
-      "completeReminder", "createReminder", "getReminder", "listTags", "resolveDateRange", "searchReminders", "updateReminder",
+      "askUser", "completeReminder", "createReminder", "getReminder", "listTags", "resolveDateRange", "searchReminders", "updateReminder",
     ]);
   });
 
@@ -107,6 +111,25 @@ describe("chat tools", () => {
     });
     it("propagates service validation errors", async () => {
       await expect(run("createReminder", { title: "Sem data", recurrence: { freq: "daily", interval: 1 } })).rejects.toMatchObject({ statusCode: 400 });
+    });
+    it("accepts null for optional fields", async () => {
+      const input = { title: "Almoço", content: null, remindAt: "2026-09-20T12:00:00-03:00", recurrence: null, tags: null };
+      expect(schema("createReminder").safeParse(input)).toMatchObject({ success: true });
+      expect(await run<Reminder>("createReminder", input)).toMatchObject({ kind: "reminder", recurrence: null, tags: [] });
+      expect(schema("searchReminders").safeParse({ query: "", from: null, to: null, tags: null, status: null })).toMatchObject({ success: true });
+      expect(await run<{ items: Reminder[] }>("searchReminders", { query: "", from: null, to: null, tags: null, status: null })).toMatchObject({ items: [expect.objectContaining({ title: "Almoço" })] });
+    });
+  });
+
+  describe("askUser", () => {
+    it("validates the question and options and returns immediately", async () => {
+      const ask = schema("askUser");
+      expect(ask.safeParse({ question: "Que horas?", options: [{ label: "9h" }, { label: "12h", description: null }], allowFreeText: true })).toMatchObject({ success: true });
+      expect(ask.safeParse({ question: "Que horas?", options: null })).toMatchObject({ success: true });
+      expect(ask.safeParse({ question: "Que horas?", options: ["9h", "12h"] })).toMatchObject({ success: true });
+      expect(ask.safeParse({ question: "" })).toMatchObject({ success: false });
+      expect(ask.safeParse({ question: "Q", options: Array.from({ length: 7 }, () => ({ label: "x" })) })).toMatchObject({ success: false });
+      expect(await run("askUser", { question: "Que horas?" })).toEqual({ awaitingUser: true });
     });
   });
 

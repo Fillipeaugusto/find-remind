@@ -9,8 +9,11 @@ import {
   CalendarRangeIcon,
   CheckIcon,
   ChevronDownIcon,
+  CircleAlertIcon,
   ExternalLinkIcon,
+  MessageCircleQuestionIcon,
   PencilIcon,
+  PencilLineIcon,
   PlusIcon,
   SearchIcon,
   StickyNoteIcon,
@@ -28,6 +31,7 @@ import { useDeleteReminder } from "@/hooks/use-reminders";
 import { errorMessage } from "@/lib/api";
 import { formatDate, formatDateTime, stripMarkdown } from "@/lib/format";
 import type { Reminder, Tag } from "@/lib/types";
+import { useQuickReply } from "./quick-reply";
 
 export type ToolPartLike = {
   toolCallId: string;
@@ -37,15 +41,66 @@ export type ToolPartLike = {
   errorText?: string;
 };
 
-const TOOL_META: Record<string, { label: string; running: string; icon: React.ComponentType<{ className?: string }> }> = {
-  searchReminders: { label: "Buscar lembretes", running: "Buscando lembretes…", icon: SearchIcon },
-  getReminder: { label: "Abrir lembrete", running: "Abrindo lembrete…", icon: BellIcon },
-  createReminder: { label: "Criar lembrete", running: "Criando lembrete…", icon: PlusIcon },
-  updateReminder: { label: "Atualizar lembrete", running: "Atualizando lembrete…", icon: PencilIcon },
-  completeReminder: { label: "Concluir lembrete", running: "Concluindo lembrete…", icon: CheckIcon },
-  resolveDateRange: { label: "Interpretar período", running: "Interpretando período…", icon: CalendarRangeIcon },
-  listTags: { label: "Listar tags", running: "Listando tags…", icon: TagIcon },
+type ToolMeta = {
+  label: string;
+  running: string;
+  failed: string;
+  icon: React.ComponentType<{ className?: string }>;
 };
+
+const TOOL_META: Record<string, ToolMeta> = {
+  searchReminders: { label: "Buscar lembretes", running: "Buscando lembretes…", failed: "A busca falhou", icon: SearchIcon },
+  getReminder: { label: "Abrir lembrete", running: "Abrindo lembrete…", failed: "Não foi possível abrir o lembrete", icon: BellIcon },
+  createReminder: { label: "Criar lembrete", running: "Criando lembrete…", failed: "Não foi possível criar o lembrete", icon: PlusIcon },
+  updateReminder: { label: "Atualizar lembrete", running: "Atualizando lembrete…", failed: "Não foi possível atualizar o lembrete", icon: PencilIcon },
+  completeReminder: { label: "Concluir lembrete", running: "Concluindo lembrete…", failed: "Não foi possível concluir o lembrete", icon: CheckIcon },
+  resolveDateRange: { label: "Interpretar período", running: "Interpretando período…", failed: "Não entendi o período", icon: CalendarRangeIcon },
+  listTags: { label: "Listar tags", running: "Listando tags…", failed: "Não foi possível listar as tags", icon: TagIcon },
+  askUser: { label: "Pergunta", running: "Preparando pergunta…", failed: "Não foi possível perguntar", icon: MessageCircleQuestionIcon },
+};
+
+export function toolMeta(name: string): ToolMeta {
+  return TOOL_META[name] ?? { label: name, running: `Executando ${name}…`, failed: `${name} falhou`, icon: WrenchIcon };
+}
+
+// Mensagens que o backend devolve em `errorText`, traduzidas para o usuário.
+const ERROR_TEXTS: Record<string, string> = {
+  "The assistant sent invalid data to the tool": "a IA enviou dados inválidos",
+  "Unable to generate a response": "falha inesperada",
+  "Reminder not found": "lembrete não encontrado",
+  "The response timed out": "tempo esgotado",
+};
+
+export function describeToolError(errorText: string | undefined): string {
+  if (!errorText) return "falha inesperada";
+  return ERROR_TEXTS[errorText] ?? errorText;
+}
+
+type AskUserOption = { label: string; description?: string | null };
+
+export type AskUserInput = {
+  question?: string;
+  options?: (string | AskUserOption)[] | null;
+  allowFreeText?: boolean | null;
+};
+
+/** Os modelos mandam as opções ora como texto, ora como objeto. */
+export function askUserOptions(input: AskUserInput | undefined): AskUserOption[] {
+  return (input?.options ?? [])
+    .map((option) => (typeof option === "string" ? { label: option } : option))
+    .filter((option): option is AskUserOption => Boolean(option && typeof option.label === "string" && option.label.trim()));
+}
+
+/** Mostra o que a IA resolveu de uma etapa interna (ex.: período interpretado). */
+export function describeStep(name: string, input: unknown, output: unknown): string {
+  if (name === "resolveDateRange") {
+    const expression = (input as { expression?: string } | undefined)?.expression;
+    const range = output as { from?: string; to?: string; label?: string } | undefined;
+    const resolved = range?.label ?? (range?.from && range?.to ? `${formatDate(range.from)} → ${formatDate(range.to)}` : "—");
+    return expression ? `“${expression}” → ${resolved}` : resolved;
+  }
+  return toolMeta(name).label;
+}
 
 function isReminder(value: unknown): value is Reminder {
   return Boolean(value) && typeof value === "object" && "id" in (value as object) && "title" in (value as object);
@@ -89,7 +144,7 @@ function ToolShell({
   state: string;
   children?: React.ReactNode;
 }) {
-  const meta = TOOL_META[name] ?? { label: name, running: `Executando ${name}…`, icon: WrenchIcon };
+  const meta = toolMeta(name);
   const Icon = meta.icon;
   const running = state === "input-streaming" || state === "input-available";
 
@@ -209,15 +264,112 @@ function JsonBlock({ value }: { value: unknown }) {
   );
 }
 
+function normalize(text: string) {
+  return text.trim().toLocaleLowerCase("pt-BR");
+}
+
+/**
+ * Pergunta da IA com respostas rápidas. Enquanto a pergunta está aberta, cada
+ * opção vira um botão que envia a resposta como mensagem; depois de
+ * respondida, a opção escolhida fica marcada. Sem opções, o usuário digita.
+ */
+function AskUserCard({ input }: { input: AskUserInput | undefined }) {
+  const reply = useQuickReply();
+  const question = input?.question?.trim();
+  const options = askUserOptions(input);
+  const rich = options.some((option) => option.description?.trim());
+  const active = Boolean(reply?.active);
+  const answered = reply?.answered !== undefined ? normalize(reply.answered) : null;
+  const freeText = options.length === 0 || Boolean(input?.allowFreeText);
+
+  if (!question) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="my-2 rounded-xl border border-border/70 bg-card p-4 text-sm"
+    >
+      <p className="flex items-start gap-2 font-medium">
+        <MessageCircleQuestionIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        <span>{question}</span>
+      </p>
+
+      {options.length ? (
+        <ul className={cn("mt-3 gap-2", rich ? "grid sm:grid-cols-2" : "flex flex-wrap")}>
+          {options.map((option) => {
+            const chosen = answered !== null && normalize(option.label) === answered;
+            return (
+              <li key={option.label}>
+                <button
+                  type="button"
+                  disabled={!active}
+                  aria-pressed={chosen}
+                  onClick={() => reply?.onAnswer(option.label)}
+                  className={cn(
+                    "w-full rounded-lg border text-left transition-colors disabled:cursor-default",
+                    rich ? "px-3 py-2.5" : "px-3 py-1.5",
+                    chosen
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border/80 bg-background text-foreground hover:enabled:border-foreground/40 hover:enabled:bg-muted/60",
+                    !active && !chosen && answered !== null && "opacity-50",
+                  )}
+                >
+                  <span className="block font-medium">{option.label}</span>
+                  {option.description?.trim() ? (
+                    <span className={cn("mt-0.5 block text-xs", chosen ? "text-background/80" : "text-muted-foreground")}>
+                      {option.description}
+                    </span>
+                  ) : null}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+
+      {active && freeText ? (
+        <button
+          type="button"
+          onClick={() => reply?.focusComposer()}
+          className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <PencilLineIcon className="size-3.5" />
+          {options.length ? "Ou digite outra resposta abaixo" : "Digite sua resposta abaixo"}
+        </button>
+      ) : null}
+
+      {!active && answered !== null && options.every((option) => normalize(option.label) !== answered) ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Resposta: <span className="text-foreground">{reply?.answered}</span>
+        </p>
+      ) : null}
+    </motion.div>
+  );
+}
+
+/** Falha de ferramenta que ficou sem nova tentativa: linha discreta com o motivo. */
+function ToolFailure({ name, errorText }: { name: string; errorText?: string }) {
+  const meta = toolMeta(name);
+  return (
+    <p className="my-2 inline-flex items-center gap-2 rounded-lg border border-border/70 bg-card px-3 py-1.5 text-xs text-muted-foreground">
+      <CircleAlertIcon className="size-3.5 shrink-0 text-destructive" />
+      <span>
+        {meta.failed} <span className="opacity-70">· {describeToolError(errorText)}</span>
+      </span>
+    </p>
+  );
+}
+
 export function ToolPart({ name, part }: { name: string; part: ToolPartLike }) {
   const { state, output, errorText, input } = part;
 
+  if (name === "askUser") {
+    return state === "output-error" ? <ToolFailure name={name} errorText={errorText} /> : <AskUserCard input={input as AskUserInput | undefined} />;
+  }
+
   if (state === "output-error") {
-    return (
-      <ToolShell name={name} state={state}>
-        <p className="text-destructive">{errorText ?? "A ferramenta falhou."}</p>
-      </ToolShell>
-    );
+    return <ToolFailure name={name} errorText={errorText} />;
   }
 
   if (state !== "output-available") {
@@ -280,16 +432,10 @@ export function ToolPart({ name, part }: { name: string; part: ToolPartLike }) {
       );
     }
     case "resolveDateRange": {
-      const range = output as { from?: string; to?: string; label?: string } | undefined;
-      const expression = (input as { expression?: string } | undefined)?.expression;
+      // Normalmente vai para a sanfona de raciocínio; aqui só se sobrar visível.
       return (
         <ToolShell name={name} state={state}>
-          <p className="flex flex-wrap items-center gap-2">
-            {expression ? <span className="text-muted-foreground">“{expression}”</span> : null}
-            <span className="rounded-md bg-muted px-2 py-0.5 text-xs">
-              {range?.label ?? (range?.from && range?.to ? `${formatDate(range.from)} → ${formatDate(range.to)}` : "—")}
-            </span>
-          </p>
+          <p className="text-muted-foreground">{describeStep(name, input, output)}</p>
         </ToolShell>
       );
     }

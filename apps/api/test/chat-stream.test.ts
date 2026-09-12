@@ -137,7 +137,7 @@ describe("POST /chat/conversations/:id/messages", () => {
     expect(system?.content).toContain("America/Sao_Paulo");
     expect(system?.content).toContain("resolveDateRange");
     expect(stream.mock.calls[0]?.[0].tools?.map((tool) => tool.name).sort()).toEqual([
-      "completeReminder", "createReminder", "getReminder", "listTags", "resolveDateRange", "searchReminders", "updateReminder",
+      "askUser", "completeReminder", "createReminder", "getReminder", "listTags", "resolveDateRange", "searchReminders", "updateReminder",
     ]);
   });
 
@@ -172,6 +172,40 @@ describe("POST /chat/conversations/:id/messages", () => {
     const res = await send({ messages: [userMessage("Loop")] });
     expect(res.statusCode).toBe(200);
     expect(stream).toHaveBeenCalledTimes(5);
+  });
+
+  it("ends the turn after askUser so the user can answer", async () => {
+    streams = [toolCallChunks("askUser", { question: "Que horas?", options: [{ label: "9h" }, { label: "12h" }] }), textChunks("Não deveria rodar.")];
+    const stream = vi.spyOn(chat, "doStream");
+    const res = await send({ messages: [userMessage("Me lembra de almoçar")] });
+    expect(res.statusCode).toBe(200);
+    expect(stream).toHaveBeenCalledTimes(1);
+    const [, assistant] = await storedMessages();
+    expect(assistant?.parts).toContainEqual(expect.objectContaining({ type: "tool-askUser", state: "output-available", output: { awaitingUser: true } }));
+    expect(assistant?.parts).not.toContainEqual(expect.objectContaining({ type: "text" }));
+  });
+
+  it("lets the model retry an invalid askUser call instead of ending the turn", async () => {
+    streams = [toolCallChunks("askUser", { question: "" }), toolCallChunks("askUser", { question: "Que horas?" }, "call-2"), textChunks("Não deveria rodar.")];
+    const stream = vi.spyOn(chat, "doStream");
+    const res = await send({ messages: [userMessage("Me lembra de almoçar")] });
+    expect(res.statusCode).toBe(200);
+    expect(stream).toHaveBeenCalledTimes(2);
+    const [, assistant] = await storedMessages();
+    expect(assistant?.parts).toContainEqual(expect.objectContaining({ type: "tool-askUser", toolCallId: "call-2", state: "output-available" }));
+  });
+
+  it("tells the model what was wrong with an invalid tool input without leaking it to the client", async () => {
+    streams = [toolCallChunks("createReminder", { title: 42 }), textChunks("Corrigido.")];
+    const stream = vi.spyOn(chat, "doStream");
+    const res = await send({ messages: [userMessage("Cria")] });
+    expect(res.statusCode).toBe(200);
+    const events = chunks(res.body);
+    expect(events).toContainEqual(expect.objectContaining({ type: "tool-input-error", errorText: "The assistant sent invalid data to the tool" }));
+    expect(events).toContainEqual(expect.objectContaining({ type: "tool-output-error", errorText: "The assistant sent invalid data to the tool" }));
+    expect(res.body).not.toContain("Invalid input for tool");
+    const secondCall = stream.mock.calls[1]?.[0];
+    expect(JSON.stringify(secondCall?.prompt)).toContain("Invalid input for tool createReminder");
   });
 
   it("reports tool failures to the model and the client without a 500", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractReminders, extractTags } from "./tool-parts";
+import { askUserOptions, describeToolError, extractReminders, extractTags } from "./tool-parts";
 
 const reminder = { id: "1", title: "A", tags: [], kind: "reminder", status: "scheduled" };
 
@@ -26,5 +26,24 @@ describe("extractTags", () => {
       { name: "b", count: 3 },
     ]);
     expect(extractTags({ items: [{ name: "c" }] })).toEqual([{ name: "c", count: 0 }]);
+  });
+});
+
+describe("askUserOptions", () => {
+  it("accepts strings and objects and drops blanks", () => {
+    expect(askUserOptions({ options: ["9h", { label: "12h", description: "almoço" }, " ", { label: "" }] })).toEqual([
+      { label: "9h" },
+      { label: "12h", description: "almoço" },
+    ]);
+    expect(askUserOptions({ options: null })).toEqual([]);
+    expect(askUserOptions(undefined)).toEqual([]);
+  });
+});
+
+describe("describeToolError", () => {
+  it("translates known backend messages and keeps the rest", () => {
+    expect(describeToolError("Reminder not found")).toBe("lembrete não encontrado");
+    expect(describeToolError("Something else")).toBe("Something else");
+    expect(describeToolError(undefined)).toBe("falha inesperada");
   });
 });

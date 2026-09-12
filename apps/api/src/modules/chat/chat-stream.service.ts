@@ -3,13 +3,16 @@ import {
   convertToModelMessages,
   createIdGenerator,
   generateText,
+  InvalidToolInputError,
   pipeUIMessageStreamToResponse,
   safeValidateUIMessages,
   stepCountIs,
   streamText,
   toUIMessageStream,
   type LanguageModel,
+  type StopCondition,
   type Tool,
+  type ToolSet,
   type UIMessage,
 } from "ai";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -33,6 +36,11 @@ const generateMessageId = createIdGenerator({ prefix: "msg", size: 16 });
 // actionable message; anything unexpected stays generic so nothing sensitive
 // (keys, URLs, stack traces) leaks into the conversation.
 export function describeStreamError(error: unknown): string {
+  // Invalid tool inputs arrive as the error instance (input event) and as its
+  // message (output event); the model still gets the full validation details.
+  if (InvalidToolInputError.isInstance(error) || (typeof error === "string" && /^(AI_InvalidToolInputError: )?Invalid input for tool /.test(error))) {
+    return "The assistant sent invalid data to the tool";
+  }
   if (error instanceof DateExpressionError || error instanceof NoProviderError || error instanceof ProviderConfigurationError) {
     return error.message;
   }
@@ -50,8 +58,27 @@ export function describeStreamError(error: unknown): string {
   return "Unable to generate a response";
 }
 
+// The turn ends once askUser ran: the user has to answer before anything
+// else makes sense. An invalid askUser call is not a result, so the model
+// still gets a chance to fix it.
+const askedUser: StopCondition<ToolSet> = ({ steps }) =>
+  steps.at(-1)?.toolResults.some((result) => result.toolName === "askUser") ?? false;
+
 function messageText(message: UserTextMessage): string {
   return message.parts.map((part) => part.text).join("\n").trim();
+}
+
+// Some models emit U+FFFD for tokens that split a multibyte character; the
+// replacement character carries no information, so it is not stored.
+export function stripReplacementCharacters(message: UIMessage): UIMessage {
+  return {
+    ...message,
+    parts: message.parts.map((part) =>
+      (part.type === "text" || part.type === "reasoning") && part.text.includes("\uFFFD")
+        ? { ...part, text: part.text.replaceAll("\uFFFD", "") }
+        : part,
+    ),
+  };
 }
 
 export function createChatStreamService(app: App) {
@@ -98,7 +125,7 @@ export function createChatStreamService(app: App) {
         system: buildSystemPrompt({ now: new Date(), timezone: actor.timezone }),
         messages: await convertToModelMessages(messages, { tools, ignoreIncompleteToolCalls: true }),
         tools,
-        stopWhen: stepCountIs(MAX_STEPS),
+        stopWhen: [stepCountIs(MAX_STEPS), askedUser],
         maxRetries: 1,
         abortSignal: abort.signal,
         onError: ({ error }) => request.log.warn({ err: error }, "Chat stream error"),
@@ -111,7 +138,7 @@ export function createChatStreamService(app: App) {
         generateMessageId,
         onError: describeStreamError,
         onEnd: async ({ responseMessage }) => {
-          const turn = [incoming, responseMessage].filter((entry) => entry.parts.length > 0) as UIMessage[];
+          const turn = [incoming, stripReplacementCharacters(responseMessage)].filter((entry) => entry.parts.length > 0) as UIMessage[];
           try {
             await repository.appendMessages(
               conversation.id,

@@ -14,6 +14,7 @@ export function Composer({
   leading,
   trailing,
   className,
+  inputRef,
 }: {
   onSend: (text: string) => void | Promise<void>;
   onStop?: () => void;
@@ -26,6 +27,8 @@ export function Composer({
   /** Controles à direita, antes do botão de enviar. */
   trailing?: React.ReactNode;
   className?: string;
+  /** Acesso externo ao textarea (ex.: focar quando a IA pede uma resposta). */
+  inputRef?: React.RefObject<HTMLTextAreaElement | null>;
 }) {
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -60,7 +63,10 @@ export function Composer({
       )}
     >
       <textarea
-        ref={ref}
+        ref={(el) => {
+          ref.current = el;
+          if (inputRef) inputRef.current = el;
+        }}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {

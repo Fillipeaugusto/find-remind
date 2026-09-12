@@ -148,7 +148,7 @@ type Conversation = { id: string, title: string | null, model: string, createdAt
 - `DELETE /chat/conversations/:id` → `204` (apaga as mensagens junto)
 - `POST /chat/conversations/:id/messages` `{ messages: UIMessage[] }` → **stream** no protocolo UI Message Stream do AI SDK (compatível com `useChat` do `@ai-sdk/react`). Persiste a mensagem do usuário e a resposta completa ao terminar.
 
-  Só a última mensagem do corpo é usada: deve ser `role: "user"` com ao menos um part `text` (até 20.000 caracteres no total, sem arquivos); as anteriores são ignoradas porque o histórico vem do servidor. Mensagem inválida → `400`; conversa inexistente ou de outro usuário → `404`; modelo da conversa indisponível → `409 { code: "NO_CHAT_PROVIDER" }`. A resposta é `200 text/event-stream` com o header `x-vercel-ai-ui-message-stream: v1`; o id da mensagem do assistente vem no evento `start`. O modelo executa até 5 passos de tools por turno. Falhas do provedor (chave inválida, modelo inexistente, limite de requisições) ou de uma tool chegam como eventos `error` / `tool-output-error` com mensagem legível, sem detalhes sensíveis, e a pergunta fica salva para reenvio. Reenviar uma mensagem com o mesmo `id` substitui o turno em vez de duplicá-lo. O título da conversa é gerado na primeira resposta.
+  Só a última mensagem do corpo é usada: deve ser `role: "user"` com ao menos um part `text` (até 20.000 caracteres no total, sem arquivos); as anteriores são ignoradas porque o histórico vem do servidor. Mensagem inválida → `400`; conversa inexistente ou de outro usuário → `404`; modelo da conversa indisponível → `409 { code: "NO_CHAT_PROVIDER" }`. A resposta é `200 text/event-stream` com o header `x-vercel-ai-ui-message-stream: v1`; o id da mensagem do assistente vem no evento `start`. O modelo executa até 5 passos de tools por turno; uma chamada a `askUser` encerra o turno na hora. Falhas do provedor (chave inválida, modelo inexistente, limite de requisições) ou de uma tool chegam como eventos `error` / `tool-output-error` com mensagem legível, sem detalhes sensíveis (input inválido enviado pelo modelo vira `tool-input-error` + `tool-output-error` com "The assistant sent invalid data to the tool"; o modelo recebe os detalhes e costuma tentar de novo), e a pergunta fica salva para reenvio. Caracteres U+FFFD (tokens quebrados do modelo) são removidos de `text`/`reasoning` antes de persistir. Reenviar uma mensagem com o mesmo `id` substitui o turno em vez de duplicá-lo. O título da conversa é gerado na primeira resposta.
 
 Ferramentas (tools) disponíveis para o modelo no chat — o frontend renderiza os `tool-*` parts como UI:
 
@@ -161,6 +161,9 @@ Ferramentas (tools) disponíveis para o modelo no chat — o frontend renderiza 
 | `completeReminder` | `{ id }` | `Reminder` |
 | `resolveDateRange` | `{ expression }` ("segunda passada", "semana que vem") | `{ from, to, label }` |
 | `listTags` | `{}` | tags com contagem → **chips** |
+| `askUser` | `{ question, options?: (string \| { label, description? })[] (até 6), allowFreeText? }` | `{ awaitingUser: true }` → **pergunta com respostas rápidas**; a resposta escolhida é enviada como mensagem de texto do usuário |
+
+Campos opcionais dos inputs aceitam `null` além de omissão (os modelos costumam mandar `null`).
 
 ## Health
 
