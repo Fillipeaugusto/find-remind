@@ -1,0 +1,27 @@
+{
+  "name": "findremind",
+  "private": true,
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:watch": "pnpm -r --parallel test:watch",
+    "db:generate": "pnpm --filter @findremind/db generate",
+    "db:migrate": "pnpm --filter @findremind/db migrate",
+    "db:studio": "pnpm --filter @findremind/db studio",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "commitlint": "commitlint"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "typescript": "^5.9.2"
+  }
+}
