@@ -12,6 +12,7 @@ import { takePendingMessage } from "@/lib/pending-message";
 import type { Conversation } from "@/lib/types";
 import { Composer } from "./composer";
 import { ChatMessage } from "./message";
+import { ModelLabel } from "./model-picker";
 
 export function ChatSession({
   conversation,
@@ -65,11 +66,8 @@ export function ChatSession({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-center border-b border-border/60 px-14 md:justify-between md:px-6">
+      <header className="flex h-14 shrink-0 items-center justify-center px-4 lg:justify-start lg:px-5">
         <h1 className="truncate text-sm font-medium">{conversation.title ?? "Nova conversa"}</h1>
-        <span className="hidden font-mono text-[11px] text-muted-foreground md:inline" title="Modelo">
-          {conversation.model.split(":").slice(1).join(":") || conversation.model}
-        </span>
       </header>
 
       <div ref={scrollRef} onScroll={onScroll} className="relative min-h-0 flex-1 overflow-y-auto scrollbar-thin">
@@ -127,6 +125,7 @@ export function ChatSession({
             }}
             onStop={stop}
             busy={busy}
+            leading={<ModelLabel model={conversation.model} />}
           />
           <p className="mt-2 text-center text-[11px] text-muted-foreground">
             A IA pode errar. Confira lembretes importantes antes de confiar.
