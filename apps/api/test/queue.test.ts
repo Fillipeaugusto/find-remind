@@ -164,8 +164,9 @@ describe("BullMQ queue plugin", () => {
     const schedulers = await running.queues[name]!.getJobSchedulers();
 
     expect(schedulers).toMatchObject([{ key: "tick", name: "tick", every: 60_000, template: { data: { source: "test" } } }]);
-    // The scheduler keeps the next run waiting in the delayed set.
-    expect(await running.queues[name]!.getDelayedCount()).toBe(1);
+    // The scheduler keeps the next run waiting in the delayed set (the first
+    // one may still be running when checked).
+    await vi.waitFor(async () => expect(await running.queues[name]!.getDelayedCount()).toBe(1), { timeout: 5_000 });
   });
 
   it("uses different key prefixes for each environment", () => {

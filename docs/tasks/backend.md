@@ -95,8 +95,8 @@ Regras de execução:
 - Aceite: teste com relógio fake (`vi.useFakeTimers`) + execução direta do handler do job.
 
 ### 3.2 API de alertas + SSE — `feat(alerts): add alerts endpoints and sse stream`
-- [ ] `GET /alerts`, `POST /alerts/:id/read`, `POST /alerts/read-all`.
-- [ ] `GET /alerts/stream`: SSE (`text/event-stream`), assina `alerts:{userId}` no Redis (conexão dedicada de subscribe), `ping` a cada 25s, encerra limpo em `request.raw.on("close")`.
+- [x] `GET /alerts`, `POST /alerts/:id/read`, `POST /alerts/read-all`.
+- [x] `GET /alerts/stream`: SSE (`text/event-stream`), assina `alerts:{userId}` no Redis (conexão dedicada de subscribe), `ping` a cada 25s, encerra limpo em `request.raw.on("close")`.
 - Aceite: testes das rotas; teste do SSE com `app.inject` + payload streaming (ou `light-my-request` com `payloadAsStream`) recebendo pelo menos um `alert`.
 
 ---

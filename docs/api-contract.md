@@ -80,10 +80,10 @@ type Alert = {
 
 O scheduler roda a cada 30s: ao disparar, um lembrete recorrente avança `nextFireAt` para a próxima ocorrência; os demais ficam `status = scheduled` com `nextFireAt = null` até o usuário concluir, adiar ou dispensar. Um lembrete atrasado gera um único alerta por varredura (ocorrências perdidas não acumulam). Há no máximo um alerta por `(reminderId, firedAt)`.
 
-- `GET /alerts?unread=true&limit=&cursor=` → paginado
-- `POST /alerts/:id/read` → `Alert`
+- `GET /alerts?unread=true&limit=&cursor=` → paginado, ordenado por `firedAt desc`; `unread` aceita `true`/`false` (padrão `false` = todos). Alertas de lembretes apagados não aparecem.
+- `POST /alerts/:id/read` → `Alert` (idempotente: mantém o primeiro `readAt`; `404` para id de outro usuário)
 - `POST /alerts/read-all` → `204`
-- `GET /alerts/stream` → **SSE**. Eventos: `alert` (payload `Alert`), `ping` a cada 25s.
+- `GET /alerts/stream` → **SSE** (`text/event-stream`). Abre com o comentário `: connected`; eventos: `alert` (`data` = `Alert`) e `ping` (`data` = `{ at }`) a cada 25s. A conexão é encerrada pelo servidor apenas no shutdown — o `EventSource` reconecta sozinho.
 
 ## Provedores de IA — `/ai/providers`
 

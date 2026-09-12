@@ -66,6 +66,8 @@ O índice do Elasticsearch é derivado do Postgres, nunca a fonte da verdade. To
 
 Os alertas são disparados pelo job `scan-due-reminders` da fila `alerts` (a cada 30s). O handler `scanDueReminders(app, now)` em `apps/api/src/alerts/scheduler.ts` reivindica lembretes com `nextFireAt <= now` usando `FOR UPDATE SKIP LOCKED`, grava um `alert` com `firedAt = nextFireAt` (o índice único `(reminderId, firedAt)` absorve retentativas), avança `nextFireAt` nos recorrentes ou zera nos demais (que ficam `scheduled` aguardando o usuário), publica o alerta no canal Redis `alerts:{userId}` via `app.alertBus` (`alerts/bus.ts`, conexão dedicada de subscribe) e reindexa o lembrete. Nos testes, congele só o relógio (`vi.useFakeTimers({ now, toFake: ["Date"] })`) e chame o handler direto.
 
+O módulo `modules/alerts` expõe a listagem (keyset em `(firedAt, id)`, `cursor.ts`), `read`/`read-all` e o stream SSE em `GET /alerts/stream`. O handler do stream faz `reply.hijack()`, copia os headers já definidos pelos hooks (CORS, helmet) no `writeHead`, assina o usuário em `app.alertBus` e encerra no `close` da request; um hook `preClose` fecha os streams abertos antes do servidor HTTP parar (senão o `close()` nunca termina). Nos testes, use `app.inject({ payloadAsStream: true })` e leia `res.stream()`; `res.raw.res.req.destroy()` simula a desconexão do cliente. Não use `vi.waitFor` com timers falsos ativos — ele avança os timers a cada checagem.
+
 O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md); o roadmap do backend em [`docs/tasks/backend.md`](docs/tasks/backend.md).
 
 ## Estrutura do frontend

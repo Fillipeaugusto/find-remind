@@ -12,6 +12,7 @@ import {
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
 import type { Env } from "./config/env.js";
+import { alertsRoutes } from "./modules/alerts/alerts.routes.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
 import { meRoutes } from "./modules/me/me.routes.js";
 import { remindersRoutes } from "./modules/reminders/reminders.routes.js";
@@ -62,6 +63,7 @@ export async function buildApp({ env, logger = true }: BuildAppOptions): Promise
     await app.register(healthRoutes);
     await app.register(meRoutes);
     await app.register(remindersRoutes);
+    await app.register(alertsRoutes);
 
     return app;
   } catch (error) {
