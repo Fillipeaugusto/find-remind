@@ -72,6 +72,8 @@ Provedores de IA ficam em `ai_provider` e os padrões por usuário em `ai_user_s
 
 `ai/catalog.ts` mantém modelos curados, inclui modelos configurados e consulta as APIs de listagem. Provedores compatíveis que não oferecem catálogo usam a lista local. No Ollama, `/api/tags` e `/api/show` identificam os modelos instalados e suas capacidades; falha de conexão é propagada. URLs do Ollama aceitam a raiz ou o sufixo `/api`; demais provedores usam a URL da API (por exemplo, `/v1` ou `/v1beta`).
 
+O módulo `modules/ai-providers` serializa explicitamente os campos públicos e deriva `hasApiKey`. O teste de conexão usa `generateText`/`embed` sem retentativas e sanitiza mensagens de erro. Alterações de configuração invalidam o teste anterior; exclusão, desativação ou falha também limpam padrões associados. Writes usam transação com lock por usuário e comparam `updatedAt` para impedir que uma resposta de rede valide credenciais alteradas durante a chamada; nenhum lock é mantido durante acesso à rede. Nos testes das rotas, use `MockLanguageModelV4` e `MockEmbeddingModelV4` de `ai/test` para exercitar o SDK sem chamadas externas.
+
 O contrato dos endpoints está em [`docs/api-contract.md`](docs/api-contract.md); o roadmap do backend em [`docs/tasks/backend.md`](docs/tasks/backend.md).
 
 ## Estrutura do frontend

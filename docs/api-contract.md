@@ -107,16 +107,22 @@ type AiProvider = {
 ```
 
 - `GET /ai/providers` → `{ items: AiProvider[] }`
-- `POST /ai/providers` `{ kind, label, baseUrl?, apiKey?, defaultChatModel?, defaultEmbeddingModel? }` → `201 AiProvider`
+- `POST /ai/providers` `{ kind, label, baseUrl?, apiKey?, enabled?, defaultChatModel?, defaultEmbeddingModel? }` → `201 AiProvider`. `enabled` começa como `true`; `baseUrl` e modelos aceitam `null`. Chaves são criptografadas e nunca retornam nas respostas.
 - `PATCH /ai/providers/:id` (parcial; `apiKey` só sobrescreve se enviado) → `AiProvider`
-- `DELETE /ai/providers/:id` → `204`
-- `POST /ai/providers/:id/test` → testa conexão, atualiza `lastCheck*` → `AiProvider`
-- `GET /ai/providers/:id/models` → `{ chat: { id: string, label: string }[], embedding: { id: string, label: string }[] }` (Ollama: `/api/tags`; demais: lista fixa curada + o que a API do provider expõe)
+- `DELETE /ai/providers/:id` → `204`, removendo também os padrões que apontam para ele.
+- `POST /ai/providers/:id/test` → testa conexão, atualiza `lastCheck*` → `200 AiProvider`, inclusive em falha (`lastCheckStatus = error`, mensagem sem detalhes sensíveis). Testa o chat configurado com uma resposta mínima e o embedding configurado com `ping`. Sem modelos configurados, escolhe o primeiro chat do catálogo; com apenas embedding, testa apenas embedding. Uma edição concorrente impede que o resultado valide credenciais antigas.
+- `GET /ai/providers/:id/models` → `{ chat: { id: string, label: string }[], embedding: { id: string, label: string }[] }` (Ollama: `/api/tags` e `/api/show` para capacidades; demais: lista curada + modelos configurados + o que a API do provider expõe). Falha no catálogo do Ollama → `502`; provedores de nuvem usam o catálogo local se a listagem remota falhar.
 - `GET /ai/models` → modelos **disponíveis para uso** = união dos providers `enabled` com `lastCheckStatus = ok`:
   ```ts
   { chat: { providerId, providerKind, model, label }[], embedding: {...}[], defaults: { chat: string | null, embedding: string | null } }
   ```
 - `PUT /ai/defaults` `{ chat?: "providerId:model", embedding?: "providerId:model" }` → `204`
+
+Todas as operações ficam restritas ao usuário autenticado; ids de outros usuários nas rotas `/ai/providers/:id*` retornam `404`. `baseUrl` exige HTTP(S), sem credenciais, query ou fragmento. URL, chave ou modelo inválido → `400`; Anthropic não aceita modelo de embedding. `apiKey` deve ser não vazia quando enviada; omiti-la no PATCH preserva a chave salva.
+
+Alterar tipo, URL, chave ou modelos zera `lastCheck*` e remove os padrões associados. Desabilitar o provedor ou falhar no teste também remove esses padrões. Alterar apenas o rótulo preserva a validação. Conflitos entre alterações simultâneas retornam `409`.
+
+Os padrões de chat e embedding são atualizados juntos, preservando campos omitidos (`{}` não altera nada). Provedor ausente, desabilitado, não testado ou sem a capacidade solicitada → `409 { statusCode, error, message, code: "NO_CHAT_PROVIDER" | "NO_EMBEDDING_PROVIDER" }`; modelo fora do catálogo → `400`. O nome após o primeiro `:` pode conter outros `:`, como `llama3.2:latest`. `GET /ai/models` omite provedores cujo catálogo não pôde ser consultado e devolve `null` para padrões ausentes da lista disponível.
 
 ## Chat — `/chat`
 

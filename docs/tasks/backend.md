@@ -115,9 +115,9 @@ Regras de execução:
 - Aceite: testes unitários do registry (instancia o provider certo) e do resolve (default, explícito, ausente).
 
 ### 4.3 Endpoints — `feat(ai): add provider settings endpoints`
-- [ ] `modules/ai-providers`: CRUD do contrato, `POST /:id/test` (chat: `generateText` com prompt mínimo `maxOutputTokens: 5`; se tiver embedding model, `embed("ping")`), `GET /:id/models`, `GET /ai/models`, `PUT /ai/defaults`.
-- [ ] Nunca serializar `apiKeyEncrypted`; `hasApiKey` derivado.
-- [ ] `GET /ai/models` só lista providers `enabled && lastCheckStatus === "ok"` (é isso que faz o modelo "aparecer para uso" no frontend).
+- [x] `modules/ai-providers`: CRUD do contrato, `POST /:id/test` (chat: `generateText` com prompt mínimo `maxOutputTokens: 5`; se tiver embedding model, `embed("ping")`), `GET /:id/models`, `GET /ai/models`, `PUT /ai/defaults`.
+- [x] Nunca serializar `apiKeyEncrypted`; `hasApiKey` derivado.
+- [x] `GET /ai/models` só lista providers `enabled && lastCheckStatus === "ok"` (é isso que faz o modelo "aparecer para uso" no frontend).
 - Aceite: testes com modelo mockado (`ai/test`) cobrindo test ok/erro, listagem, defaults, isolamento por usuário.
 
 ---
